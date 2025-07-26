@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Player Rankings</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Player Rankings</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link active">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="rankings-container">
+        <div class="rankings-header">
+            <h1 class="page-title glitch" data-text="AINCRAD RANKINGS">AINCRAD RANKINGS</h1>
+            <p class="page-subtitle">The strongest players in the death game</p>
+        </div>
+
+        <div class="ranking-tabs">
+            <button class="tab-btn active" onclick="switchRankingTab('overall')">Overall</button>
+            <button class="tab-btn" onclick="switchRankingTab('vulnerabilities')">Bug Hunters</button>
+            <button class="tab-btn" onclick="switchRankingTab('quests')">Boss Slayers</button>
+            <button class="tab-btn" onclick="switchRankingTab('achievements')">Achievement Hunters</button>
+        </div>
+
+        <div class="rankings-list" id="rankingsList">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </main>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/ranking.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>

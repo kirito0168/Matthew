@@ -1,0 +1,379 @@
+/* SAO Theme Advanced Animations */
+
+/* Particle System */
+.particle-system {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    opacity: 0;
+    animation: particleFloat 10s linear infinite;
+}
+
+@keyframes particleFloat {
+    0% {
+        opacity: 0;
+        transform: translateY(100vh) scale(0);
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-100vh) scale(1);
+    }
+}
+
+/* Glitch Effect */
+.glitch {
+    position: relative;
+    animation: glitch 2s infinite;
+}
+
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch::before {
+    animation: glitch-1 0.5s infinite;
+    color: var(--primary-color);
+    z-index: -1;
+}
+
+.glitch::after {
+    animation: glitch-2 0.5s infinite;
+    color: var(--accent-color);
+    z-index: -2;
+}
+
+@keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+}
+
+@keyframes glitch-1 {
+    0%, 100% { clip-path: inset(0 0 0 0); }
+    25% { clip-path: inset(10% 0 60% 0); }
+    50% { clip-path: inset(50% 0 20% 0); }
+    75% { clip-path: inset(30% 0 40% 0); }
+}
+
+@keyframes glitch-2 {
+    0%, 100% { clip-path: inset(0 0 0 0); }
+    25% { clip-path: inset(60% 0 10% 0); }
+    50% { clip-path: inset(20% 0 50% 0); }
+    75% { clip-path: inset(40% 0 30% 0); }
+}
+
+/* Typing Animation */
+.typing-text {
+    overflow: hidden;
+    border-right: 3px solid var(--primary-color);
+    white-space: nowrap;
+    animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: var(--primary-color); }
+}
+
+/* Level Up Animation */
+.level-up {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    text-shadow: 0 0 20px var(--accent-color);
+    animation: levelUpPulse 2s ease-out forwards;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+@keyframes levelUpPulse {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2);
+    }
+}
+
+/* Quest Complete Animation */
+.quest-complete {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg);
+    border: 2px solid var(--accent-color);
+    padding: 2rem;
+    border-radius: 8px;
+    animation: questCompleteSlide 3s ease-out forwards;
+    z-index: 9999;
+}
+
+@keyframes questCompleteSlide {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-100px);
+    }
+    20% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    80% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-100px);
+    }
+}
+
+/* Damage Numbers */
+.damage-number {
+    position: absolute;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--danger);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    animation: damageFloat 1s ease-out forwards;
+    pointer-events: none;
+}
+
+.damage-number.critical {
+    color: var(--accent-color);
+    font-size: 3rem;
+}
+
+@keyframes damageFloat {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+
+/* Menu Transition */
+.menu-transition {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--dark-bg);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.menu-transition.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.menu-hexagon {
+    width: 200px;
+    height: 200px;
+    position: relative;
+    animation: hexagonSpin 2s linear infinite;
+}
+
+@keyframes hexagonSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Skill Animation */
+.skill-activation {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--primary-color) 0%, transparent 70%);
+    animation: skillPulse 1s ease-out forwards;
+    pointer-events: none;
+    z-index: 9997;
+}
+
+@keyframes skillPulse {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0);
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(3);
+    }
+}
+
+/* HP Bar Animation */
+.hp-bar {
+    width: 100%;
+    height: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success) 0%, var(--primary-color) 100%);
+    transition: width 0.5s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.hp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    animation: hpShine 2s linear infinite;
+}
+
+@keyframes hpShine {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+/* Achievement Unlock */
+.achievement-unlock {
+    position: fixed;
+    bottom: 20px;
+    right: -400px;
+    background: var(--card-bg);
+    border: 2px solid var(--accent-color);
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: achievementSlide 4s ease-out forwards;
+    z-index: 9996;
+}
+
+@keyframes achievementSlide {
+    0% { right: -400px; }
+    20% { right: 20px; }
+    80% { right: 20px; }
+    100% { right: -400px; }
+}
+
+/* Crystal Animation */
+.crystal {
+    width: 50px;
+    height: 70px;
+    position: relative;
+    margin: 20px auto;
+}
+
+.crystal::before,
+.crystal::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+.crystal::before {
+    border-left: 25px solid transparent;
+    border-right: 25px solid transparent;
+    border-bottom: 35px solid var(--primary-color);
+    animation: crystalGlow 2s ease-in-out infinite;
+}
+
+.crystal::after {
+    top: 35px;
+    border-left: 25px solid transparent;
+    border-right: 25px solid transparent;
+    border-top: 35px solid var(--primary-color);
+    animation: crystalGlow 2s ease-in-out infinite;
+}
+
+@keyframes crystalGlow {
+    0%, 100% {
+        filter: brightness(1) drop-shadow(0 0 10px var(--primary-color));
+    }
+    50% {
+        filter: brightness(1.5) drop-shadow(0 0 20px var(--primary-color));
+    }
+}
+
+/* Login Effect */
+.login-effect {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, var(--primary-color) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    animation: loginPulse 1s ease-out forwards;
+    z-index: 9995;
+}
+
+@keyframes loginPulse {
+    0% { opacity: 0; }
+    50% { opacity: 0.5; }
+    100% { opacity: 0; }
+}

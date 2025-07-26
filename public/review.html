@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Reviews</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Review System</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="reviews-container">
+        <div class="reviews-header">
+            <h1 class="page-title">Player Reviews</h1>
+            <button class="btn-primary" onclick="openReviewModal()">Write Review</button>
+        </div>
+
+        <div class="reviews-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalReviews">0</div>
+                <div class="stat-label">Total Reviews</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgRating">0.0</div>
+                <div class="stat-label">Average Rating</div>
+            </div>
+        </div>
+
+        <div class="reviews-list" id="reviewsList">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </main>
+
+    <!-- Write Review Modal -->
+    <div class="modal" id="reviewModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeReviewModal()">&times;</span>
+            <h2 class="modal-title">Write a Review</h2>
+            <form id="reviewForm" class="review-form">
+                <div class="form-group">
+                    <label class="form-label">Rating</label>
+                    <div class="star-rating" id="starRating">
+                        <span class="star" data-rating="1">⭐</span>
+                        <span class="star" data-rating="2">⭐</span>
+                        <span class="star" data-rating="3">⭐</span>
+                        <span class="star" data-rating="4">⭐</span>
+                        <span class="star" data-rating="5">⭐</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Review (Optional)</label>
+                    <textarea id="reviewComment" class="form-input" rows="5" 
+                              placeholder="Share your experience with the bug bounty system..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Submit Review</button>
+                    <button type="button" class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/reviews.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>

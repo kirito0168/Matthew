@@ -1,0 +1,386 @@
+/* Quests Page Styles */
+
+.quests-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.quests-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.page-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-top: 1rem;
+}
+
+.difficulty-filter {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.diff-btn {
+    padding: 0.75rem 1.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.diff-btn.active,
+.diff-btn:hover {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+}
+
+/* Quests Grid */
+.quests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.quest-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease-out;
+    cursor: pointer;
+}
+
+.quest-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 0%, rgba(0, 212, 255, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.quest-card:hover::before {
+    opacity: 1;
+}
+
+.quest-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+    border-color: var(--primary-color);
+}
+
+.quest-card.completed {
+    opacity: 0.7;
+    border-color: var(--success);
+}
+
+.quest-card.completed::after {
+    content: '✓ CLEARED';
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--success);
+    color: var(--dark-bg);
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.quest-floor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.floor-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-shadow: 0 0 10px var(--primary-color);
+}
+
+.quest-difficulty {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.difficulty-easy {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 1px solid #4caf50;
+}
+
+.difficulty-medium {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ff9800;
+    border: 1px solid #ff9800;
+}
+
+.difficulty-hard {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid #f44336;
+}
+
+.difficulty-nightmare {
+    background: rgba(156, 39, 176, 0.2);
+    color: #9c27b0;
+    border: 1px solid #9c27b0;
+    animation: nightmarePulse 2s ease-in-out infinite;
+}
+
+@keyframes nightmarePulse {
+    0%, 100% { box-shadow: 0 0 10px #9c27b0; }
+    50% { box-shadow: 0 0 20px #9c27b0, 0 0 30px #9c27b0; }
+}
+
+.boss-name {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.quest-description {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.quest-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.quest-action {
+    width: 100%;
+    padding: 1rem;
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.quest-action:hover:not(:disabled) {
+    background: transparent;
+    color: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+}
+
+.quest-action:disabled {
+    background: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Battle Modal */
+.battle-modal .modal-content {
+    max-width: 800px;
+    width: 90%;
+}
+
+.battle-content {
+    background: var(--card-bg);
+    border: 2px solid var(--primary-color);
+}
+
+.battle-title {
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    text-shadow: 0 0 20px var(--primary-color);
+}
+
+.battle-arena {
+    display: grid;
+    gap: 2rem;
+}
+
+.boss-section,
+.player-section {
+    text-align: center;
+}
+
+.boss-sprite {
+    font-size: 5rem;
+    margin: 1rem 0;
+    animation: float 2s ease-in-out infinite;
+}
+
+.hp-bar {
+    width: 100%;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    margin: 1rem 0;
+}
+
+.boss-hp .hp-fill {
+    background: linear-gradient(90deg, #f44336 0%, #ff6b6b 100%);
+}
+
+.player-hp .hp-fill {
+    background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+}
+
+.battle-log {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1rem;
+    height: 200px;
+    overflow-y: auto;
+    margin: 1rem 0;
+}
+
+.battle-log p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.battle-log .damage-text {
+    color: var(--danger);
+    font-weight: bold;
+}
+
+.battle-log .heal-text {
+    color: var(--success);
+    font-weight: bold;
+}
+
+.battle-log .critical-text {
+    color: var(--accent-color);
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.battle-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.action-btn {
+    padding: 1rem 2rem;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
+}
+
+.action-btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    box-shadow: 0 0 20px var(--primary-color);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-close-battle {
+    width: 100%;
+    padding: 1rem;
+    background: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+}
+
+.btn-close-battle:hover {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+}
+
+/* Battle Effects */
+.damage-flash {
+    animation: damageFlash 0.3s ease-out;
+}
+
+@keyframes damageFlash {
+    0% { background-color: rgba(244, 67, 54, 0.5); }
+    100% { background-color: transparent; }
+}
+
+.heal-flash {
+    animation: healFlash 0.3s ease-out;
+}
+
+@keyframes healFlash {
+    0% { background-color: rgba(76, 175, 80, 0.5); }
+    100% { background-color: transparent; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .quests-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quest-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .battle-actions {
+        flex-direction: column;
+    }
+} 

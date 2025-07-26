@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Dashboard</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Player Dashboard</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="dashboard-container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Player Dashboard</h1>
+            <p class="dashboard-subtitle">Welcome back, <span id="playerName">Player</span>!</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Player Stats Card -->
+            <div class="dashboard-card player-stats">
+                <h2 class="card-title">Player Statistics</h2>
+                <div class="stats-content">
+                    <div class="stat-item">
+                        <span class="stat-label">Level</span>
+                        <span class="stat-value" id="playerLevel">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Experience</span>
+                        <span class="stat-value" id="playerExp">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Current Title</span>
+                        <span class="stat-value" id="playerTitle">Novice Player</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Rank</span>
+                        <span class="stat-value" id="playerRank">-</span>
+                    </div>
+                </div>
+                <div class="exp-bar">
+                    <div class="exp-fill" id="expBar"></div>
+                    <span class="exp-text" id="expText">0 / 1000</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="dashboard-card quick-actions">
+                <h2 class="card-title">Quick Actions</h2>
+                <div class="actions-grid">
+                    <a href="/vulnerabilities.html" class="action-btn">
+                        <div class="action-icon">🐛</div>
+                        <span>Report Bug</span>
+                    </a>
+                    <a href="/quests.html" class="action-btn">
+                        <div class="action-icon">⚔️</div>
+                        <span>Start Quest</span>
+                    </a>
+                    <a href="/profile.html" class="action-btn">
+                        <div class="action-icon">👤</div>
+                        <span>Profile</span>
+                    </a>
+                    <a href="/reviews.html" class="action-btn">
+                        <div class="action-icon">⭐</div>
+                        <span>Reviews</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Activity Card -->
+            <div class="dashboard-card recent-activity">
+                <h2 class="card-title">Recent Activity</h2>
+                <div class="activity-list" id="activityList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+
+            <!-- Achievements Progress Card -->
+            <div class="dashboard-card achievements-progress">
+                <h2 class="card-title">Achievement Progress</h2>
+                <div class="achievement-list" id="achievementList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+
+            <!-- Stats Overview Card -->
+            <div class="dashboard-card stats-overview">
+                <h2 class="card-title">Performance Overview</h2>
+                <div class="overview-grid">
+                    <div class="overview-item">
+                        <div class="overview-number" id="bugsReported">0</div>
+                        <div class="overview-label">Bugs Reported</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="overview-number" id="bugsResolved">0</div>
+                        <div class="overview-label">Bugs Resolved</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="overview-number" id="questsCompleted">0</div>
+                        <div class="overview-label">Quests Completed</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="overview-number" id="reviewsGiven">0</div>
+                        <div class="overview-label">Reviews Given</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Latest Vulnerabilities Card -->
+            <div class="dashboard-card latest-vulnerabilities">
+                <h2 class="card-title">Latest Vulnerabilities</h2>
+                <div class="vulnerabilities-list" id="vulnerabilitiesList">
+                    <div class="loading-spinner"></div>
+                </div>
+                <a href="/vulnerabilities.html" class="view-all-link">View All Vulnerabilities →</a>
+            </div>
+        </div>
+    </main>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>

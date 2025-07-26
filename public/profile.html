@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Player Profile</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Player Profile</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="profile-container">
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <img src="/images/default-avatar.png" alt="Player Avatar" id="playerAvatar">
+                <div class="level-badge" id="levelBadge">Lv.1</div>
+            </div>
+            <div class="profile-info">
+                <h1 class="player-name" id="playerName">Loading...</h1>
+                <div class="player-title-container">
+                    <span class="current-title" id="currentTitle">Novice Player</span>
+                    <button class="btn-change-title" onclick="openTitleModal()">Change Title</button>
+                </div>
+                <div class="player-meta">
+                    <span class="join-date">Joined: <span id="joinDate">-</span></span>
+                    <span class="rank">Rank: <span id="playerRank">#-</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <!-- Stats Overview -->
+            <div class="profile-card stats-card">
+                <h2 class="card-title">Player Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value" id="playerLevel">1</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">✨</div>
+                        <div class="stat-value" id="playerExp">0</div>
+                        <div class="stat-label">Experience</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">🐛</div>
+                        <div class="stat-value" id="bugsReported">0</div>
+                        <div class="stat-label">Bugs Reported</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value" id="bugsResolved">0</div>
+                        <div class="stat-label">Bugs Resolved</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">⚔️</div>
+                        <div class="stat-value" id="questsCompleted">0</div>
+                        <div class="stat-label">Quests Done</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value" id="reviewsGiven">0</div>
+                        <div class="stat-label">Reviews</div>
+                    </div>
+                </div>
+                <div class="exp-progress">
+                    <div class="exp-label">Experience Progress</div>
+                    <div class="exp-bar">
+                        <div class="exp-fill" id="expBar"></div>
+                        <span class="exp-text" id="expText">0 / 1000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <div class="profile-card achievements-card">
+                <h2 class="card-title">Achievements</h2>
+                <div class="achievements-grid" id="achievementsGrid">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+
+            <!-- Activity History -->
+            <div class="profile-card activity-card">
+                <h2 class="card-title">Recent Activity</h2>
+                <div class="activity-tabs">
+                    <button class="tab-btn active" onclick="switchTab('all')">All</button>
+                    <button class="tab-btn" onclick="switchTab('bugs')">Bugs</button>
+                    <button class="tab-btn" onclick="switchTab('quests')">Quests</button>
+                    <button class="tab-btn" onclick="switchTab('achievements')">Achievements</button>
+                </div>
+                <div class="activity-list" id="activityList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+
+            <!-- Quest History -->
+            <div class="profile-card quest-history-card">
+                <h2 class="card-title">Quest Completion History</h2>
+                <div class="quest-list" id="questList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Title Selection Modal -->
+    <div class="modal" id="titleModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeTitleModal()">&times;</span>
+            <h2 class="modal-title">Select Your Title</h2>
+            <div class="titles-grid" id="titlesGrid">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>
+                

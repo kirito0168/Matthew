@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Vulnerabilities</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Bug Hunting System</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="vulnerabilities-container">
+        <div class="vulnerabilities-header">
+            <h1 class="page-title">Bug Hunting System</h1>
+            <button class="btn-primary" onclick="openReportModal()">Report New Bug</button>
+        </div>
+
+        <div class="filters-section">
+            <select id="severityFilter" class="filter-select" onchange="loadVulnerabilities()">
+                <option value="">All Severities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+            </select>
+            <select id="statusFilter" class="filter-select" onchange="loadVulnerabilities()">
+                <option value="">All Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+            </select>
+        </div>
+
+        <div class="vulnerabilities-tabs">
+            <button class="tab-btn active" onclick="switchVulnTab('all')">All Vulnerabilities</button>
+            <button class="tab-btn" onclick="switchVulnTab('my-reports')">My Reports</button>
+            <button class="tab-btn" onclick="switchVulnTab('my-resolved')">My Resolutions</button>
+        </div>
+
+        <div class="vulnerabilities-list" id="vulnerabilitiesList">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </main>
+
+    <!-- Report Bug Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeReportModal()">&times;</span>
+            <h2 class="modal-title">Report New Vulnerability</h2>
+            <form id="reportForm" class="report-form">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" id="bugTitle" class="form-input" required 
+                           placeholder="Brief description of the vulnerability">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="bugDescription" class="form-input" rows="5" required
+                              placeholder="Detailed description of the vulnerability"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Severity</label>
+                    <select id="bugSeverity" class="form-input" required>
+                        <option value="">Select Severity</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Submit Report</button>
+                    <button type="button" class="btn-secondary" onclick="closeReportModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vulnerability Details Modal -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeDetailsModal()">&times;</span>
+            <h2 class="modal-title" id="detailsTitle">Vulnerability Details</h2>
+            <div class="vulnerability-details" id="vulnerabilityDetails">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/vulnerabilities.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>

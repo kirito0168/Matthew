@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Quest Board</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/quests.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Quest Board</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="quests-container">
+        <div class="quests-header">
+            <h1 class="page-title glitch" data-text="BOSS RAID QUESTS">BOSS RAID QUESTS</h1>
+            <p class="page-subtitle">Defeat powerful bosses to earn experience and climb the floors of Aincrad!</p>
+        </div>
+
+        <div class="difficulty-filter">
+            <button class="diff-btn active" onclick="filterQuests('all')">All Floors</button>
+            <button class="diff-btn" onclick="filterQuests('easy')">Easy</button>
+            <button class="diff-btn" onclick="filterQuests('medium')">Medium</button>
+            <button class="diff-btn" onclick="filterQuests('hard')">Hard</button>
+            <button class="diff-btn" onclick="filterQuests('nightmare')">Nightmare</button>
+        </div>
+
+        <div class="quests-grid" id="questsGrid">
+            <div class="loading-spinner"></div>
+        </div>
+    </main>
+
+    <!-- Quest Battle Modal -->
+    <div class="modal battle-modal" id="battleModal">
+        <div class="modal-content battle-content">
+            <h2 class="battle-title" id="battleTitle">Boss Battle</h2>
+            
+            <div class="battle-arena">
+                <div class="boss-section">
+                    <h3 id="bossName">Boss Name</h3>
+                    <div class="hp-bar boss-hp">
+                        <div class="hp-fill" id="bossHp" style="width: 100%"></div>
+                        <span class="hp-text" id="bossHpText">1000/1000</span>
+                    </div>
+                    <div class="boss-sprite">⚔️</div>
+                </div>
+
+                <div class="battle-log" id="battleLog">
+                    <p>Battle will begin...</p>
+                </div>
+
+                <div class="player-section">
+                    <h3>You</h3>
+                    <div class="hp-bar player-hp">
+                        <div class="hp-fill" id="playerHp" style="width: 100%"></div>
+                        <span class="hp-text" id="playerHpText">100/100</span>
+                    </div>
+                    <div class="battle-actions" id="battleActions">
+                        <button class="action-btn" onclick="performAction('attack')">⚔️ Attack</button>
+                        <button class="action-btn" onclick="performAction('defend')">🛡️ Defend</button>
+                        <button class="action-btn" onclick="performAction('skill')">✨ Skill</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-close-battle" onclick="closeBattle()">Close</button>
+        </div>
+    </div>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/quests.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>

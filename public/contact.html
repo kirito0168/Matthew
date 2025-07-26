@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Bug Bounty - Contact</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Contact Support</div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/contact.html" class="nav-link active">Contact</a></li>
+                <li class="nav-auth"></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="contact-container">
+        <div class="contact-header">
+            <h1 class="page-title">Contact Game Master</h1>
+            <p class="page-subtitle">Need help? Send us a message and we'll get back to you soon!</p>
+        </div>
+
+        <div class="contact-content">
+            <div class="contact-card">
+                <form id="contactForm" class="contact-form">
+                    <div class="form-group">
+                        <label class="form-label">Your Name</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                id="contactName" 
+                                class="form-input" 
+                                placeholder="Enter your name"
+                                required
+                            >
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="email" 
+                                id="contactEmail" 
+                                class="form-input" 
+                                placeholder="Enter your email"
+                                required
+                            >
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <div class="input-wrapper">
+                            <select id="contactSubject" class="form-input" required>
+                                <option value="">Select a subject</option>
+                                <option value="bug">Bug Report</option>
+                                <option value="feedback">Feedback</option>
+                                <option value="support">Technical Support</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Message</label>
+                        <div class="input-wrapper">
+                            <textarea 
+                                id="contactMessage" 
+                                class="form-input" 
+                                rows="6"
+                                placeholder="Describe your issue or feedback..."
+                                required
+                            ></textarea>
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit">
+                            <span class="btn-text">Send Message</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="contact-info">
+                    <h2>Additional Information</h2>
+                    <div class="info-item">
+                        <span class="info-icon">📧</span>
+                        <div>
+                            <h3>Email Support</h3>
+                            <p>support@sao-bugbounty.com</p>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-icon">⏰</span>
+                        <div>
+                            <h3>Response Time</h3>
+                            <p>We typically respond within 24-48 hours</p>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-icon">📍</span>
+                        <div>
+                            <h3>Location</h3>
+                            <p>Floor 1 - Town of Beginnings, Aincrad</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="particle-system"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/contact.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>
