@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SAO Bug Bounty System - Welcome to Aincrad</title>
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
@@ -23,10 +24,7 @@
                 <li><a href="/" class="nav-link active">Home</a></li>
                 <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
                 <li><a href="/contact.html" class="nav-link">Contact</a></li>
-                <li class="nav-auth">
-                    <a href="/login.html" class="btn-login">Login</a>
-                    <a href="/register.html" class="btn-register">Register</a>
-                </li>
+                <li class="nav-auth"></li>
             </ul>
         </div>
     </nav>
@@ -73,39 +71,7 @@
         </div>
     </main>
 
-    <section class="features-section">
-        <h2 class="section-title">Game Features</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🗡️</div>
-                <h3>Bug Hunting</h3>
-                <p>Report vulnerabilities and earn experience points</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚔️</div>
-                <h3>Boss Raids</h3>
-                <p>Complete quests and defeat powerful bosses</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🏆</div>
-                <h3>Achievements</h3>
-                <p>Unlock titles and show off your accomplishments</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Rankings</h3>
-                <p>Compete with other players for the top spot</p>
-            </div>
-        </div>
-    </section>
-
-    <div class="modal" id="systemModal">
-        <div class="modal-content">
-            <span class="modal-close">&times;</span>
-            <h2 class="modal-title">System Announcement</h2>
-            <p class="modal-message"></p>
-        </div>
-    </div>
+    <div class="particle-system"></div>
 
     <script src="js/main.js"></script>
     <script src="js/animations.js"></script>
