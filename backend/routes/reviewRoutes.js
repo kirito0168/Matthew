@@ -10,6 +10,3 @@ router.delete('/:id', authenticateToken, reviewController.deleteReview);
 router.get('/user/:userId?', authenticateToken, reviewController.getUserReviews);
 
 module.exports = router;
-
-
-

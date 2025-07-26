@@ -51,21 +51,14 @@ async function updateNavigation() {
             </div>
         `;
         
-        // Add Quests link to nav menu if not already present and user is logged in
+        // Add active states for logged-in only pages
         const navMenu = document.querySelector('.nav-menu');
-        const questsLinkExists = Array.from(navMenu.querySelectorAll('.nav-link')).some(link => link.href.includes('/quests.html'));
-        
-        if (!questsLinkExists) {
-            const questsItem = document.createElement('li');
-            questsItem.innerHTML = '<a href="/quests.html" class="nav-link">Quests</a>';
-            navMenu.insertBefore(questsItem, navAuth);
-        }
-    } else {
-        // If not logged in, show login/register buttons
-        navAuth.innerHTML = `
-            <a href="/login.html" class="btn-login">Login</a>
-            <a href="/register.html" class="btn-register">Register</a>
-        `;
+        const additionalLinks = ['<li><a href="/quests.html" class="nav-link">Quests</a></li>'];
+        additionalLinks.forEach(link => {
+            const li = document.createElement('li');
+            li.innerHTML = link;
+            navMenu.insertBefore(li, navAuth);
+        });
     }
 }
 
@@ -91,10 +84,9 @@ function showNotification(message, type = 'info') {
         padding: 1rem 2rem;
         background: var(--card-bg);
         border: 2px solid var(--${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'primary'}-color);
-        color: var(--text-primary);
-        border-radius: 4px;
-        z-index: 9999;
+        border-radius: 8px;
         animation: slideIn 0.3s ease-out;
+        z-index: 9999;
     `;
     
     document.body.appendChild(notification);
@@ -105,40 +97,72 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// Fetch and display stats on homepage
+async function loadHomeStats() {
+    if (!document.getElementById('totalPlayers')) return;
+
+    try {
+        // Fetch total players
+        const playersResponse = await fetch(`${API_URL}/rankings?limit=1`);
+        const playersData = await playersResponse.json();
+        document.getElementById('totalPlayers').textContent = playersData.pagination.total || 0;
+
+        // Fetch total bugs
+        const bugsResponse = await fetch(`${API_URL}/vulnerabilities?limit=1`);
+        const bugsData = await bugsResponse.json();
+        document.getElementById('totalBugs').textContent = bugsData.pagination.total || 0;
+
+        // Fetch total quests
+        const questsResponse = await fetch(`${API_URL}/quests`);
+        const questsData = await questsResponse.json();
+        document.getElementById('totalQuests').textContent = questsData.quests.length || 0;
+
+        // Animate numbers
+        animateNumbers();
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Animate number counting
+function animateNumbers() {
+    const numbers = document.querySelectorAll('.stat-number');
+    numbers.forEach(num => {
+        const target = parseInt(num.textContent);
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                num.textContent = target;
+                clearInterval(timer);
+            } else {
+                num.textContent = Math.floor(current);
+            }
+        }, 30);
+    });
+}
+
 // Format date
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
     });
 }
 
 // Create loading spinner
 function createLoadingSpinner() {
-    return '<div class="loading-spinner"></div>';
+    const spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
+    return spinner;
 }
 
-// Load home page stats
-async function loadHomeStats() {
-    if (!document.getElementById('totalPlayers')) return;
-    
-    try {
-        const response = await fetch(`${API_URL}/stats`);
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('totalPlayers').textContent = data.stats.totalPlayers || 0;
-            document.getElementById('totalBugs').textContent = data.stats.totalBugs || 0;
-            document.getElementById('totalQuests').textContent = data.stats.totalQuests || 0;
-        }
-    } catch (error) {
-        console.error('Load stats error:', error);
-    }
-}
-
-// Require authentication
+// Handle protected routes
 async function requireAuth() {
     const user = await checkAuth();
     if (!user) {
@@ -154,11 +178,7 @@ async function requireAuth() {
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await updateNavigation();
-    
-    // Only load home stats if on home page
-    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-        loadHomeStats();
-    }
+    loadHomeStats();
     
     // Add smooth scrolling
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

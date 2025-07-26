@@ -6,7 +6,6 @@
     <title>SAO Bug Bounty - Quest Board</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/quests.css">
-    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
@@ -25,7 +24,6 @@
                 <li><a href="/" class="nav-link">Home</a></li>
                 <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
                 <li><a href="/contact.html" class="nav-link">Contact</a></li>
-                <li><a href="/quests.html" class="nav-link active">Quests</a></li>
                 <li class="nav-auth"></li>
             </ul>
         </div>
@@ -62,19 +60,19 @@
                         <div class="hp-fill" id="bossHp" style="width: 100%"></div>
                         <span class="hp-text" id="bossHpText">1000/1000</span>
                     </div>
+                    <div class="boss-sprite">⚔️</div>
                 </div>
-                
+
                 <div class="battle-log" id="battleLog">
-                    <p>Battle log will appear here...</p>
+                    <p>Battle will begin...</p>
                 </div>
-                
+
                 <div class="player-section">
-                    <h3>Player</h3>
+                    <h3>You</h3>
                     <div class="hp-bar player-hp">
                         <div class="hp-fill" id="playerHp" style="width: 100%"></div>
                         <span class="hp-text" id="playerHpText">100/100</span>
                     </div>
-                    
                     <div class="battle-actions" id="battleActions">
                         <button class="action-btn" onclick="performAction('attack')">⚔️ Attack</button>
                         <button class="action-btn" onclick="performAction('defend')">🛡️ Defend</button>
@@ -82,8 +80,8 @@
                     </div>
                 </div>
             </div>
-            
-            <button class="btn-secondary" onclick="closeBattleModal()">Close</button>
+
+            <button class="btn-close-battle" onclick="closeBattle()">Close</button>
         </div>
     </div>
 

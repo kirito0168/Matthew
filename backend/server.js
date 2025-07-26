@@ -32,56 +32,6 @@ app.use('/api/quests', questRoutes);
 app.use('/api/rankings', rankingRoutes);
 app.use('/api/achievements', achievementRoutes);
 
-// Stats endpoint for home page
-app.get('/api/stats', async (req, res) => {
-    try {
-        const db = require('./config/db');
-        
-        // Get total players
-        db.query('SELECT COUNT(*) as count FROM users', (err1, players) => {
-            if (err1) {
-                console.error('Error getting player count:', err1);
-                players = [{ count: 0 }];
-            }
-            
-            // Get total bugs
-            db.query('SELECT COUNT(*) as count FROM vulnerabilities', (err2, bugs) => {
-                if (err2) {
-                    console.error('Error getting bug count:', err2);
-                    bugs = [{ count: 0 }];
-                }
-                
-                // Get total quests
-                db.query('SELECT COUNT(*) as count FROM quests WHERE is_active = true', (err3, quests) => {
-                    if (err3) {
-                        console.error('Error getting quest count:', err3);
-                        quests = [{ count: 0 }];
-                    }
-                    
-                    res.json({
-                        success: true,
-                        stats: {
-                            totalPlayers: players[0].count,
-                            totalBugs: bugs[0].count,
-                            totalQuests: quests[0].count
-                        }
-                    });
-                });
-            });
-        });
-    } catch (error) {
-        console.error('Stats error:', error);
-        res.json({
-            success: true,
-            stats: {
-                totalPlayers: 0,
-                totalBugs: 0,
-                totalQuests: 0
-            }
-        });
-    }
-});
-
 // Contact endpoint (no auth required)
 app.post('/api/contact', (req, res) => {
     const { name, email, message } = req.body;
@@ -105,29 +55,9 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Specific routes for HTML files
-app.get('/quests', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/quests.html'));
-});
-
-app.get('/reviews', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/reviews.html'));
-});
-
 // Catch all route - serve index.html for client-side routing
 app.get('*', (req, res) => {
-    // Check if the request is for a specific HTML file
-    const requestPath = req.path;
-    const htmlFile = requestPath.endsWith('.html') ? requestPath : `${requestPath}.html`;
-    const filePath = path.join(__dirname, '../public', htmlFile);
-    
-    // Check if the file exists
-    const fs = require('fs');
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.sendFile(path.join(__dirname, '../public/index.html'));
-    }
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Start server
