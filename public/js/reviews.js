@@ -5,6 +5,9 @@ let currentPage = 1;
 const itemsPerPage = 10;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Update navigation first
+    await updateNavigation();
+    
     // Require authentication
     const user = await requireAuth();
     if (!user) return;
@@ -344,43 +347,42 @@ style.textContent = `
     color: var(--text-secondary);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
+    font-size: 0.9remtransition: all 0.3s ease;
 }
 
 .btn-edit:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+   border-color: var(--primary-color);
+   color: var(--primary-color);
 }
 
 .btn-delete:hover {
-    border-color: var(--danger);
-    color: var(--danger);
+   border-color: var(--danger);
+   color: var(--danger);
 }
 
 /* Star Rating */
 .star-rating {
-    display: flex;
-    gap: 0.5rem;
-    font-size: 2rem;
+   display: flex;
+   gap: 0.5rem;
+   font-size: 2rem;
 }
 
 .star {
-    cursor: pointer;
-    filter: grayscale(100%);
-    transition: all 0.3s ease;
+   cursor: pointer;
+   filter: grayscale(100%);
+   transition: all 0.3s ease;
 }
 
 .star:hover,
 .star.selected {
-    filter: grayscale(0%);
-    transform: scale(1.1);
+   filter: grayscale(0%);
+   transform: scale(1.1);
 }
 
 .review-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
 }
 `;
 document.head.appendChild(style);
