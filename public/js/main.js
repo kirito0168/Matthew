@@ -396,3 +396,5 @@ window.formatDate = formatDate;
 window.createLoadingSpinner = createLoadingSpinner;
 window.API_URL = API_URL;
 window.logout = logout;
+window.escapeHtml = escapeHtml;
+window.generateStars = generateStars;

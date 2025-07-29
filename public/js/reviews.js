@@ -60,6 +60,42 @@ function displayReviews(reviews) {
         return;
     }
 
+    // Check if functions exist, if not define them locally
+    if (typeof escapeHtml !== 'function') {
+        window.escapeHtml = function(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        };
+    }
+
+    if (typeof generateStars !== 'function') {
+        window.generateStars = function(rating) {
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += `<span class="star ${i <= rating ? 'filled' : ''}">⭐</span>`;
+            }
+            return stars;
+        };
+    }
+
+    if (typeof formatDate !== 'function') {
+        window.formatDate = function(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        };
+    }
+
     reviewsList.innerHTML = reviews.map(review => `
         <div class="review-card">
             <div class="review-header">
@@ -93,30 +129,11 @@ function displayReviews(reviews) {
     `).join('');
 }
 
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-    if (!text) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
-}
-
-function generateStars(rating) {
-    let stars = '';
-    for (let i = 1; i <= 5; i++) {
-        stars += `<span class="star ${i <= rating ? 'filled' : ''}">⭐</span>`;
-    }
-    return stars;
-}
-
 function updateStats(total, average) {
     document.getElementById('totalReviews').textContent = total || 0;
-    document.getElementById('avgRating').textContent = average ? average.toFixed(1) : '0.0';
+    // Convert average to number and handle null/undefined
+    const avgNum = parseFloat(average) || 0;
+    document.getElementById('avgRating').textContent = avgNum.toFixed(1);
 }
 
 function displayPagination(pagination) {
@@ -319,14 +336,4 @@ async function deleteReview(id) {
         console.error('Error deleting review:', error);
         showNotification('Error deleting review', 'error');
     }
-}
-
-// Format date
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
 }

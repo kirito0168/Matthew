@@ -1,6 +1,16 @@
-const db = require('../config/database');
-const { validateRating, sanitizeInput } = require('../utils/validation');
+// Fixed Review Controller
+const db = require('../services/db');
 const { checkAchievements } = require('./userController');
+
+// Helper functions for validation
+const validateRating = (rating) => {
+    return rating >= 1 && rating <= 5;
+};
+
+const sanitizeInput = (input) => {
+    if (!input) return null;
+    return input.trim().replace(/[<>]/g, '');
+};
 
 // Create a new review
 const createReview = (req, res) => {
