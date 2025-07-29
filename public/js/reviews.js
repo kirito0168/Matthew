@@ -82,15 +82,9 @@ function displayReviews(reviews) {
             </div>
             <div class="review-footer">
                 <span class="review-date">${formatDate(review.created_at)}</span>
-<<<<<<< HEAD
                 ${currentUser && currentUser.id && review.user_id === currentUser.id ? 
                     `<div class="review-actions">
                         <button class="btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${escapeHtml(review.comment || '').replace(/'/g, "\\'")}')">Edit</button>
-=======
-                ${review.user_id === currentUser.id ? 
-                    `<div class="review-actions">
-                        <button class="btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${(review.comment || '').replace(/'/g, "\\'")}')">Edit</button>
->>>>>>> 6fe93014ac8f489de2ab9b88497b690b7f73c467
                         <button class="btn-delete" onclick="deleteReview(${review.id})">Delete</button>
                     </div>` : 
                     ''}
@@ -121,11 +115,7 @@ function generateStars(rating) {
 }
 
 function updateStats(total, average) {
-<<<<<<< HEAD
     document.getElementById('totalReviews').textContent = total || 0;
-=======
-    document.getElementById('totalReviews').textContent = total;
->>>>>>> 6fe93014ac8f489de2ab9b88497b690b7f73c467
     document.getElementById('avgRating').textContent = average ? average.toFixed(1) : '0.0';
 }
 
@@ -497,25 +487,18 @@ style.textContent = `
     border: 1px solid var(--border-color);
     color: var(--text-primary);
     border-radius: 4px;
-<<<<<<< HEAD
     resize: vertical;
-=======
->>>>>>> 6fe93014ac8f489de2ab9b88497b690b7f73c467
 }
 
 .form-input:focus {
     outline: none;
     border-color: var(--primary-color);
-<<<<<<< HEAD
     box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-=======
->>>>>>> 6fe93014ac8f489de2ab9b88497b690b7f73c467
 }
 
 .form-actions {
     display: flex;
     gap: 1rem;
-<<<<<<< HEAD
     justify-content: flex-end;
 }
 
@@ -532,8 +515,6 @@ style.textContent = `
 .btn-secondary:hover {
     background: var(--text-secondary);
     color: var(--dark-bg);
-=======
->>>>>>> 6fe93014ac8f489de2ab9b88497b690b7f73c467
 }
 
 .pagination-controls {
@@ -564,7 +545,6 @@ style.textContent = `
     color: var(--dark-bg);
     border-radius: 4px;
     font-weight: bold;
-<<<<<<< HEAD
 }
 
 .no-data {
@@ -579,8 +559,6 @@ style.textContent = `
     color: var(--danger);
     padding: 3rem;
     font-size: 1.1rem;
-=======
->>>>>>> 6fe93014ac8f489de2ab9b88497b690b7f73c467
 }
 `;
 document.head.appendChild(style);
