@@ -30,7 +30,7 @@ app.use('/api/vulnerabilities', vulnerabilityRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/rankings', rankingRoutes);
-app.use('/api/achievements', achievementRoutes);
+app.use('/api/achievements', achievementRoutes);    
 
 // Contact endpoint (no auth required)
 app.post('/api/contact', (req, res) => {

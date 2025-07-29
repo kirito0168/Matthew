@@ -53,11 +53,11 @@
         <div class="pagination" id="pagination"></div>
     </main>
 
-    <!-- Write Review Modal -->
+    <!-- Write/Edit Review Modal -->
     <div class="modal" id="reviewModal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeReviewModal()">&times;</span>
-            <h2 class="modal-title">Write a Review</h2>
+            <h2 class="modal-title" id="modalTitle">Write a Review</h2>
             <form id="reviewForm" class="review-form">
                 <div class="form-group">
                     <label class="form-label">Rating</label>
@@ -75,7 +75,7 @@
                               placeholder="Share your experience with the bug bounty system..."></textarea>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn-primary">Submit Review</button>
+                    <button type="submit" class="btn-primary" id="submitButton">Submit Review</button>
                     <button type="button" class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
                 </div>
             </form>

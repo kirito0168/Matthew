@@ -3,23 +3,30 @@
 let selectedRating = 0;
 let currentPage = 1;
 const itemsPerPage = 10;
+let editingReviewId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Update navigation first
     await updateNavigation();
     
-    // Require authentication
-    const user = await requireAuth();
-    if (!user) return;
-
+    // Check if user is logged in but don't require auth for viewing
+    const user = await checkAuth();
+    
     // Load reviews
     await loadReviews();
 
-    // Setup star rating
-    setupStarRating();
-
-    // Setup form handler
-    document.getElementById('reviewForm').addEventListener('submit', handleReviewSubmit);
+    // Setup star rating if user is logged in
+    if (user) {
+        setupStarRating();
+        // Setup form handler
+        document.getElementById('reviewForm').addEventListener('submit', handleReviewSubmit);
+    } else {
+        // Hide write review button if not logged in
+        const writeButton = document.querySelector('.btn-primary');
+        if (writeButton) {
+            writeButton.style.display = 'none';
+        }
+    }
 });
 
 async function loadReviews() {
@@ -31,20 +38,24 @@ async function loadReviews() {
 
         if (response.ok) {
             const data = await response.json();
+            console.log('Reviews data:', data); // Debug log
             displayReviews(data.reviews);
             displayPagination(data.pagination);
             updateStats(data.pagination.total, data.averageRating);
+        } else {
+            throw new Error('Failed to load reviews');
         }
     } catch (error) {
         console.error('Error loading reviews:', error);
-        reviewsList.innerHTML = '<p class="error">Error loading reviews</p>';
+        reviewsList.innerHTML = '<p class="error">Error loading reviews. Please try again later.</p>';
     }
 }
 
 function displayReviews(reviews) {
     const reviewsList = document.getElementById('reviewsList');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-    if (reviews.length === 0) {
+    if (!reviews || reviews.length === 0) {
         reviewsList.innerHTML = '<p class="no-data">No reviews yet. Be the first to write one!</p>';
         return;
     }
@@ -64,22 +75,35 @@ function displayReviews(reviews) {
                 </div>
             </div>
             <div class="review-content">
-                ${review.comment ? `<p class="review-comment">${review.comment}</p>` : ''}
+                ${review.comment ? `<p class="review-comment">${escapeHtml(review.comment)}</p>` : '<p class="review-comment">No comment provided</p>'}
                 ${review.vulnerability_title ? 
-                    `<p class="review-context">Review for: <span class="vuln-link">${review.vulnerability_title}</span></p>` : 
+                    `<p class="review-context">Review for: <span class="vuln-link">${escapeHtml(review.vulnerability_title)}</span></p>` : 
                     ''}
             </div>
             <div class="review-footer">
                 <span class="review-date">${formatDate(review.created_at)}</span>
-                ${review.user_id === JSON.parse(localStorage.getItem('user')).id ? 
+                ${currentUser && currentUser.id && review.user_id === currentUser.id ? 
                     `<div class="review-actions">
-                        <button class="btn-edit" onclick="editReview(${review.id})">Edit</button>
+                        <button class="btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${escapeHtml(review.comment || '').replace(/'/g, "\\'")}')">Edit</button>
                         <button class="btn-delete" onclick="deleteReview(${review.id})">Delete</button>
                     </div>` : 
                     ''}
             </div>
         </div>
     `).join('');
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 function generateStars(rating) {
@@ -91,14 +115,14 @@ function generateStars(rating) {
 }
 
 function updateStats(total, average) {
-    document.getElementById('totalReviews').textContent = total;
-    document.getElementById('avgRating').textContent = average.toFixed(1);
+    document.getElementById('totalReviews').textContent = total || 0;
+    document.getElementById('avgRating').textContent = average ? average.toFixed(1) : '0.0';
 }
 
 function displayPagination(pagination) {
     const paginationDiv = document.getElementById('pagination');
     
-    if (pagination.totalPages <= 1) {
+    if (!pagination || pagination.totalPages <= 1) {
         paginationDiv.innerHTML = '';
         return;
     }
@@ -109,12 +133,26 @@ function displayPagination(pagination) {
         html += `<button class="page-btn" onclick="changePage(${pagination.page - 1})">Previous</button>`;
     }
 
-    for (let i = 1; i <= pagination.totalPages; i++) {
+    // Show limited page numbers
+    const startPage = Math.max(1, pagination.page - 2);
+    const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+
+    if (startPage > 1) {
+        html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
+        if (startPage > 2) html += '<span>...</span>';
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
         if (i === pagination.page) {
             html += `<span class="page-current">${i}</span>`;
         } else {
             html += `<button class="page-btn" onclick="changePage(${i})">${i}</button>`;
         }
+    }
+
+    if (endPage < pagination.totalPages) {
+        if (endPage < pagination.totalPages - 1) html += '<span>...</span>';
+        html += `<button class="page-btn" onclick="changePage(${pagination.totalPages})">${pagination.totalPages}</button>`;
     }
 
     if (pagination.page < pagination.totalPages) {
@@ -132,7 +170,10 @@ function changePage(page) {
 
 // Star rating setup
 function setupStarRating() {
-    const stars = document.querySelectorAll('.star');
+    const starContainer = document.getElementById('starRating');
+    if (!starContainer) return;
+    
+    const stars = starContainer.querySelectorAll('.star');
     
     stars.forEach(star => {
         star.addEventListener('click', () => {
@@ -145,13 +186,13 @@ function setupStarRating() {
         });
     });
     
-    document.getElementById('starRating').addEventListener('mouseleave', () => {
+    starContainer.addEventListener('mouseleave', () => {
         updateStarDisplay(selectedRating);
     });
 }
 
 function updateStarDisplay(rating) {
-    const stars = document.querySelectorAll('.star');
+    const stars = document.querySelectorAll('#starRating .star');
     stars.forEach((star, index) => {
         if (index < rating) {
             star.classList.add('selected');
@@ -162,8 +203,23 @@ function updateStarDisplay(rating) {
 }
 
 // Review modal functions
-function openReviewModal() {
+async function openReviewModal() {
+    // Check if user is logged in
+    const user = await checkAuth();
+    if (!user) {
+        showNotification('Please login to write a review', 'error');
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 1000);
+        return;
+    }
+
     document.getElementById('reviewModal').style.display = 'block';
+    document.getElementById('modalTitle').textContent = 'Write a Review';
+    document.getElementById('submitButton').textContent = 'Submit Review';
+    editingReviewId = null;
+    selectedRating = 0;
+    updateStarDisplay(0);
 }
 
 function closeReviewModal() {
@@ -171,6 +227,7 @@ function closeReviewModal() {
     document.getElementById('reviewForm').reset();
     selectedRating = 0;
     updateStarDisplay(0);
+    editingReviewId = null;
 }
 
 async function handleReviewSubmit(e) {
@@ -184,31 +241,60 @@ async function handleReviewSubmit(e) {
     const comment = document.getElementById('reviewComment').value;
 
     try {
-        const response = await fetch(`${API_URL}/reviews`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                rating: selectedRating, 
-                comment: comment || null,
-                vulnerabilityId: null // General review
-            })
-        });
+        let response;
+        
+        if (editingReviewId) {
+            // Update existing review
+            response = await fetch(`${API_URL}/reviews/${editingReviewId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    rating: selectedRating, 
+                    comment: comment || null
+                })
+            });
+        } else {
+            // Create new review
+            response = await fetch(`${API_URL}/reviews`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    rating: selectedRating, 
+                    comment: comment || null,
+                    vulnerabilityId: null // General review
+                })
+            });
+        }
 
         if (response.ok) {
-            showNotification('Review posted successfully!', 'success');
+            showNotification(editingReviewId ? 'Review updated successfully!' : 'Review posted successfully!', 'success');
             closeReviewModal();
             loadReviews();
         } else {
             const data = await response.json();
-            showNotification(data.message || 'Failed to post review', 'error');
+            showNotification(data.message || 'Failed to save review', 'error');
         }
     } catch (error) {
-        console.error('Error posting review:', error);
-        showNotification('Error posting review', 'error');
+        console.error('Error saving review:', error);
+        showNotification('Error saving review', 'error');
     }
+}
+
+function editReview(id, rating, comment) {
+    editingReviewId = id;
+    selectedRating = rating;
+    document.getElementById('reviewComment').value = comment || '';
+    updateStarDisplay(rating);
+    
+    document.getElementById('reviewModal').style.display = 'block';
+    document.getElementById('modalTitle').textContent = 'Edit Review';
+    document.getElementById('submitButton').textContent = 'Update Review';
 }
 
 async function deleteReview(id) {
@@ -251,12 +337,14 @@ style.textContent = `
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
+    animation: fadeInUp 0.5s ease-out;
 }
 
 .reviews-stats {
     display: flex;
     gap: 2rem;
     margin-bottom: 2rem;
+    animation: fadeInUp 0.5s ease-out 0.2s backwards;
 }
 
 .review-card {
@@ -266,6 +354,12 @@ style.textContent = `
     padding: 1.5rem;
     margin-bottom: 1rem;
     animation: fadeInUp 0.5s ease-out;
+    transition: all 0.3s ease;
+}
+
+.review-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 212, 255, 0.2);
 }
 
 .review-header {
@@ -310,6 +404,7 @@ style.textContent = `
 .review-comment {
     color: var(--text-primary);
     margin-bottom: 1rem;
+    line-height: 1.6;
 }
 
 .review-context {
@@ -347,42 +442,123 @@ style.textContent = `
     color: var(--text-secondary);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9remtransition: all 0.3s ease;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
 }
 
 .btn-edit:hover {
-   border-color: var(--primary-color);
-   color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .btn-delete:hover {
-   border-color: var(--danger);
-   color: var(--danger);
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 /* Star Rating */
 .star-rating {
-   display: flex;
-   gap: 0.5rem;
-   font-size: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    font-size: 2rem;
 }
 
 .star {
-   cursor: pointer;
-   filter: grayscale(100%);
-   transition: all 0.3s ease;
+    cursor: pointer;
+    filter: grayscale(100%);
+    transition: all 0.3s ease;
 }
 
 .star:hover,
 .star.selected {
-   filter: grayscale(0%);
-   transform: scale(1.1);
+    filter: grayscale(0%);
+    transform: scale(1.1);
 }
 
 .review-form {
-   display: flex;
-   flex-direction: column;
-   gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-input {
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn-secondary {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--text-secondary);
+    color: var(--dark-bg);
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.page-btn:hover {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+}
+
+.page-current {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.no-data {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem;
+    font-size: 1.1rem;
+}
+
+.error {
+    text-align: center;
+    color: var(--danger);
+    padding: 3rem;
+    font-size: 1.1rem;
 }
 `;
 document.head.appendChild(style);
