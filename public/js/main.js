@@ -366,6 +366,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('Main.js initialization complete');
 });
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+            stars += '<span class="star filled">★</span>';
+        } else {
+            stars += '<span class="star">☆</span>';
+        }
+    }
+    return stars;
+}
 
 // Export functions for use in other scripts
 window.checkAuth = checkAuth;

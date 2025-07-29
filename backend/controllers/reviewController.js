@@ -1,38 +1,38 @@
 const db = require('../config/database');
+const { validateRating, sanitizeInput } = require('../utils/validation');
 const { checkAchievements } = require('./userController');
-const { validateRating, sanitizeInput, validatePagination } = require('../utils/validation');
 
-// Create review
+// Create a new review
 const createReview = (req, res) => {
-    const { vulnerabilityId, rating, comment } = req.body;
+    const { rating, comment, vulnerabilityId } = req.body;
 
     // Validate rating
-    if (!validateRating(rating)) {
+    if (!rating || !validateRating(rating)) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Rating must be between 1 and 5' 
+            message: 'Valid rating (1-5) is required' 
         });
     }
 
-    // Sanitize comment if provided
+    // Sanitize comment
     const sanitizedComment = comment ? sanitizeInput(comment) : null;
 
-    // Check if user already reviewed this vulnerability (if vulnerabilityId is provided)
+    // Check if user already reviewed this vulnerability (if vulnerabilityId provided)
     if (vulnerabilityId) {
         db.query(
-            'SELECT id FROM reviews WHERE user_id = ? AND vulnerability_id = ?',
+            'SELECT * FROM reviews WHERE user_id = ? AND vulnerability_id = ?',
             [req.userId, vulnerabilityId],
-            (error, existing) => {
-                if (error) {
-                    console.error('Check review error:', error);
+            (checkError, existingReviews) => {
+                if (checkError) {
+                    console.error('Check existing review error:', checkError);
                     return res.status(500).json({ 
                         success: false, 
                         message: 'Server error' 
                     });
                 }
 
-                if (existing.length > 0) {
-                    return res.status(409).json({ 
+                if (existingReviews.length > 0) {
+                    return res.status(400).json({ 
                         success: false, 
                         message: 'You have already reviewed this vulnerability' 
                     });
@@ -49,14 +49,20 @@ const createReview = (req, res) => {
         db.query(
             'INSERT INTO reviews (user_id, vulnerability_id, rating, comment) VALUES (?, ?, ?, ?)',
             [req.userId, vulnerabilityId || null, rating, sanitizedComment],
-            (insertError, result) => {
-                if (insertError) {
-                    console.error('Create review error:', insertError);
+            (error, result) => {
+                if (error) {
+                    console.error('Create review error:', error);
                     return res.status(500).json({ 
                         success: false, 
                         message: 'Server error' 
                     });
                 }
+
+                // Update user stats and check achievements
+                db.query(
+                    'UPDATE users SET reviews_given = reviews_given + 1 WHERE id = ?',
+                    [req.userId]
+                );
 
                 // Check for review achievements
                 db.query(
@@ -94,7 +100,7 @@ const createReview = (req, res) => {
     }
 };
 
-// Get all reviews - SIMPLIFIED VERSION FOR DEBUGGING
+// Get all reviews
 const getReviews = (req, res) => {
     console.log('getReviews called with query:', req.query);
     
@@ -107,103 +113,92 @@ const getReviews = (req, res) => {
 
     console.log('Pagination:', { validPage, validLimit, offset });
 
-    // First, let's try a simple query to see if the database connection works
-    db.query('SELECT COUNT(*) as count FROM reviews', (testError, testResult) => {
-        if (testError) {
-            console.error('Database connection test failed:', testError);
+    // Build query
+    let query = `
+        SELECT 
+            r.*,
+            u.username,
+            u.avatar_url,
+            u.level,
+            v.title as vulnerability_title
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        LEFT JOIN vulnerabilities v ON r.vulnerability_id = v.id
+        WHERE 1=1
+    `;
+    const params = [];
+
+    if (vulnerabilityId) {
+        query += ' AND r.vulnerability_id = ?';
+        params.push(vulnerabilityId);
+    }
+
+    query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
+    params.push(validLimit, offset);
+
+    console.log('Executing query:', query);
+    console.log('With params:', params);
+
+    // Execute main query
+    db.query(query, params, (error, reviews) => {
+        if (error) {
+            console.error('Database query error:', error);
             return res.status(500).json({ 
                 success: false, 
-                message: 'Database connection error',
-                error: testError.message 
+                message: 'Failed to fetch reviews',
+                error: error.message 
             });
         }
-        
-        console.log('Database connection OK. Total reviews in database:', testResult[0].count);
 
-        // Now try the main query
-        let query = `
-            SELECT 
-                r.*,
-                u.username,
-                u.avatar_url,
-                u.level,
-                v.title as vulnerability_title
-            FROM reviews r
-            JOIN users u ON r.user_id = u.id
-            LEFT JOIN vulnerabilities v ON r.vulnerability_id = v.id
-            WHERE 1=1
-        `;
-        const params = [];
+        console.log(`Found ${reviews.length} reviews`);
+
+        // Get total count
+        let countQuery = 'SELECT COUNT(*) as total FROM reviews WHERE 1=1';
+        const countParams = [];
 
         if (vulnerabilityId) {
-            query += ' AND r.vulnerability_id = ?';
-            params.push(vulnerabilityId);
+            countQuery += ' AND vulnerability_id = ?';
+            countParams.push(vulnerabilityId);
         }
 
-        query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
-        params.push(validLimit, offset);
-
-        console.log('Executing query:', query);
-        console.log('With params:', params);
-
-        db.query(query, params, (error, reviews) => {
-            if (error) {
-                console.error('Get reviews query error:', error);
+        db.query(countQuery, countParams, (countError, countResult) => {
+            if (countError) {
+                console.error('Count query error:', countError);
                 return res.status(500).json({ 
                     success: false, 
-                    message: 'Error fetching reviews',
-                    error: error.message 
+                    message: 'Failed to count reviews' 
                 });
             }
 
-            console.log('Reviews fetched:', reviews.length);
-
-            // Get total count
-            let countQuery = 'SELECT COUNT(*) as total FROM reviews WHERE 1=1';
-            const countParams = [];
+            // Get average rating
+            let avgQuery = 'SELECT AVG(rating) as average FROM reviews WHERE 1=1';
+            const avgParams = [];
 
             if (vulnerabilityId) {
-                countQuery += ' AND vulnerability_id = ?';
-                countParams.push(vulnerabilityId);
+                avgQuery += ' AND vulnerability_id = ?';
+                avgParams.push(vulnerabilityId);
             }
 
-            db.query(countQuery, countParams, (countError, countResult) => {
-                if (countError) {
-                    console.error('Count query error:', countError);
-                    // Don't fail the request, just set total to 0
-                    countResult = [{ total: 0 }];
+            db.query(avgQuery, avgParams, (avgError, avgResult) => {
+                if (avgError) {
+                    console.error('Average query error:', avgError);
+                    avgResult = [{ average: 0 }];
                 }
 
-                // Calculate average rating
-                let avgQuery = 'SELECT AVG(rating) as average FROM reviews WHERE 1=1';
-                const avgParams = [];
-
-                if (vulnerabilityId) {
-                    avgQuery += ' AND vulnerability_id = ?';
-                    avgParams.push(vulnerabilityId);
-                }
-
-                db.query(avgQuery, avgParams, (avgError, avgResult) => {
-                    if (avgError) {
-                        console.error('Average query error:', avgError);
-                        avgResult = [{ average: 0 }];
+                const response = {
+                    success: true,
+                    reviews: reviews || [],
+                    averageRating: avgResult[0].average || 0,
+                    pagination: {
+                        total: countResult[0].total || 0,
+                        page: validPage,
+                        totalPages: Math.ceil((countResult[0].total || 0) / validLimit),
+                        limit: validLimit
                     }
+                };
 
-                    const response = {
-                        success: true,
-                        reviews: reviews || [],
-                        averageRating: avgResult[0].average || 0,
-                        pagination: {
-                            total: countResult[0].total || 0,
-                            page: validPage,
-                            totalPages: Math.ceil((countResult[0].total || 0) / validLimit),
-                            limit: validLimit
-                        }
-                    };
-
-                    console.log('Sending response:', JSON.stringify(response, null, 2));
-                    res.json(response);
-                });
+                console.log('Sending response with', response.reviews.length, 'reviews');
+                res.json(response);
             });
         });
     });
