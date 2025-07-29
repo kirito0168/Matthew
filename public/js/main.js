@@ -52,11 +52,18 @@ async function updateNavigation() {
                 <a href="/vulnerabilities.html" class="dropdown-link">Vulnerabilities</a>
                 <a href="/quests.html" class="dropdown-link">Quests</a>
                 <a href="/reviews.html" class="dropdown-link">Reviews</a>
-                <a href="#" class="dropdown-link" onclick="logout()">Logout</a>
+                <a href="#" class="dropdown-link" onclick="logout(); return false;">Logout</a>
             </div>
         `;
         
         navAuth.appendChild(userMenu);
+        
+        // Add click event to toggle dropdown on mobile
+        const userInfo = userMenu.querySelector('.user-info');
+        userInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('active');
+        });
         
         // Add quest link to main menu if it doesn't exist
         const navMenu = document.querySelector('.nav-menu');
@@ -121,6 +128,59 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
+    
+    // Add notification styles if not already present
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            .notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 2rem;
+                background: var(--card-bg);
+                border: 2px solid var(--primary-color);
+                border-radius: 8px;
+                color: var(--text-primary);
+                z-index: 9999;
+                animation: slideIn 0.3s ease-out;
+            }
+            
+            .notification.success {
+                border-color: var(--success);
+                background: rgba(76, 175, 80, 0.1);
+            }
+            
+            .notification.error {
+                border-color: var(--danger);
+                background: rgba(244, 67, 54, 0.1);
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     document.body.appendChild(notification);
     
@@ -225,22 +285,12 @@ async function requireAuth() {
     return user;
 }
 
-// Handle dropdown clicks to prevent event bubbling
-function handleDropdownClick(event) {
-    event.stopPropagation();
-}
-
 // Close dropdowns when clicking outside
 function handleDocumentClick(event) {
     const userMenus = document.querySelectorAll('.user-menu');
     userMenus.forEach(menu => {
         if (!menu.contains(event.target)) {
-            const dropdown = menu.querySelector('.user-dropdown');
-            if (dropdown) {
-                dropdown.style.opacity = '0';
-                dropdown.style.visibility = 'hidden';
-                dropdown.style.transform = 'translateY(-10px)';
-            }
+            menu.classList.remove('active');
         }
     });
 }
@@ -277,6 +327,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add document click listener for dropdown management
     document.addEventListener('click', handleDocumentClick);
     
+    // Prevent dropdown links from closing dropdown immediately
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('dropdown-link') && e.target.getAttribute('href') !== '#') {
+            const userMenu = e.target.closest('.user-menu');
+            if (userMenu) {
+                userMenu.classList.remove('active');
+            }
+        }
+    });
+    
     // Add smooth scrolling
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -309,6 +369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Export functions for use in other scripts
 window.checkAuth = checkAuth;
+window.updateNavigation = updateNavigation;
 window.requireAuth = requireAuth;
 window.showNotification = showNotification;
 window.formatDate = formatDate;
