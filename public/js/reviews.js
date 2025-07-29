@@ -3,6 +3,7 @@
 let selectedRating = 0;
 let currentPage = 1;
 const itemsPerPage = 10;
+let editingReviewId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Update navigation first
@@ -34,6 +35,8 @@ async function loadReviews() {
             displayReviews(data.reviews);
             displayPagination(data.pagination);
             updateStats(data.pagination.total, data.averageRating);
+        } else {
+            throw new Error('Failed to load reviews');
         }
     } catch (error) {
         console.error('Error loading reviews:', error);
@@ -43,6 +46,7 @@ async function loadReviews() {
 
 function displayReviews(reviews) {
     const reviewsList = document.getElementById('reviewsList');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (reviews.length === 0) {
         reviewsList.innerHTML = '<p class="no-data">No reviews yet. Be the first to write one!</p>';
@@ -71,9 +75,9 @@ function displayReviews(reviews) {
             </div>
             <div class="review-footer">
                 <span class="review-date">${formatDate(review.created_at)}</span>
-                ${review.user_id === JSON.parse(localStorage.getItem('user')).id ? 
+                ${review.user_id === currentUser.id ? 
                     `<div class="review-actions">
-                        <button class="btn-edit" onclick="editReview(${review.id})">Edit</button>
+                        <button class="btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${(review.comment || '').replace(/'/g, "\\'")}')">Edit</button>
                         <button class="btn-delete" onclick="deleteReview(${review.id})">Delete</button>
                     </div>` : 
                     ''}
@@ -92,13 +96,13 @@ function generateStars(rating) {
 
 function updateStats(total, average) {
     document.getElementById('totalReviews').textContent = total;
-    document.getElementById('avgRating').textContent = average.toFixed(1);
+    document.getElementById('avgRating').textContent = average ? average.toFixed(1) : '0.0';
 }
 
 function displayPagination(pagination) {
     const paginationDiv = document.getElementById('pagination');
     
-    if (pagination.totalPages <= 1) {
+    if (!pagination || pagination.totalPages <= 1) {
         paginationDiv.innerHTML = '';
         return;
     }
@@ -109,12 +113,26 @@ function displayPagination(pagination) {
         html += `<button class="page-btn" onclick="changePage(${pagination.page - 1})">Previous</button>`;
     }
 
-    for (let i = 1; i <= pagination.totalPages; i++) {
+    // Show limited page numbers
+    const startPage = Math.max(1, pagination.page - 2);
+    const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+
+    if (startPage > 1) {
+        html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
+        if (startPage > 2) html += '<span>...</span>';
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
         if (i === pagination.page) {
             html += `<span class="page-current">${i}</span>`;
         } else {
             html += `<button class="page-btn" onclick="changePage(${i})">${i}</button>`;
         }
+    }
+
+    if (endPage < pagination.totalPages) {
+        if (endPage < pagination.totalPages - 1) html += '<span>...</span>';
+        html += `<button class="page-btn" onclick="changePage(${pagination.totalPages})">${pagination.totalPages}</button>`;
     }
 
     if (pagination.page < pagination.totalPages) {
@@ -132,7 +150,10 @@ function changePage(page) {
 
 // Star rating setup
 function setupStarRating() {
-    const stars = document.querySelectorAll('.star');
+    const starContainer = document.getElementById('starRating');
+    if (!starContainer) return;
+    
+    const stars = starContainer.querySelectorAll('.star');
     
     stars.forEach(star => {
         star.addEventListener('click', () => {
@@ -145,13 +166,13 @@ function setupStarRating() {
         });
     });
     
-    document.getElementById('starRating').addEventListener('mouseleave', () => {
+    starContainer.addEventListener('mouseleave', () => {
         updateStarDisplay(selectedRating);
     });
 }
 
 function updateStarDisplay(rating) {
-    const stars = document.querySelectorAll('.star');
+    const stars = document.querySelectorAll('#starRating .star');
     stars.forEach((star, index) => {
         if (index < rating) {
             star.classList.add('selected');
@@ -164,6 +185,11 @@ function updateStarDisplay(rating) {
 // Review modal functions
 function openReviewModal() {
     document.getElementById('reviewModal').style.display = 'block';
+    document.getElementById('modalTitle').textContent = 'Write a Review';
+    document.getElementById('submitButton').textContent = 'Submit Review';
+    editingReviewId = null;
+    selectedRating = 0;
+    updateStarDisplay(0);
 }
 
 function closeReviewModal() {
@@ -171,6 +197,7 @@ function closeReviewModal() {
     document.getElementById('reviewForm').reset();
     selectedRating = 0;
     updateStarDisplay(0);
+    editingReviewId = null;
 }
 
 async function handleReviewSubmit(e) {
@@ -184,31 +211,60 @@ async function handleReviewSubmit(e) {
     const comment = document.getElementById('reviewComment').value;
 
     try {
-        const response = await fetch(`${API_URL}/reviews`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                rating: selectedRating, 
-                comment: comment || null,
-                vulnerabilityId: null // General review
-            })
-        });
+        let response;
+        
+        if (editingReviewId) {
+            // Update existing review
+            response = await fetch(`${API_URL}/reviews/${editingReviewId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    rating: selectedRating, 
+                    comment: comment || null
+                })
+            });
+        } else {
+            // Create new review
+            response = await fetch(`${API_URL}/reviews`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    rating: selectedRating, 
+                    comment: comment || null,
+                    vulnerabilityId: null // General review
+                })
+            });
+        }
 
         if (response.ok) {
-            showNotification('Review posted successfully!', 'success');
+            showNotification(editingReviewId ? 'Review updated successfully!' : 'Review posted successfully!', 'success');
             closeReviewModal();
             loadReviews();
         } else {
             const data = await response.json();
-            showNotification(data.message || 'Failed to post review', 'error');
+            showNotification(data.message || 'Failed to save review', 'error');
         }
     } catch (error) {
-        console.error('Error posting review:', error);
-        showNotification('Error posting review', 'error');
+        console.error('Error saving review:', error);
+        showNotification('Error saving review', 'error');
     }
+}
+
+function editReview(id, rating, comment) {
+    editingReviewId = id;
+    selectedRating = rating;
+    document.getElementById('reviewComment').value = comment || '';
+    updateStarDisplay(rating);
+    
+    document.getElementById('reviewModal').style.display = 'block';
+    document.getElementById('modalTitle').textContent = 'Edit Review';
+    document.getElementById('submitButton').textContent = 'Update Review';
 }
 
 async function deleteReview(id) {
@@ -347,42 +403,91 @@ style.textContent = `
     color: var(--text-secondary);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9remtransition: all 0.3s ease;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
 }
 
 .btn-edit:hover {
-   border-color: var(--primary-color);
-   color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .btn-delete:hover {
-   border-color: var(--danger);
-   color: var(--danger);
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 /* Star Rating */
 .star-rating {
-   display: flex;
-   gap: 0.5rem;
-   font-size: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    font-size: 2rem;
 }
 
 .star {
-   cursor: pointer;
-   filter: grayscale(100%);
-   transition: all 0.3s ease;
+    cursor: pointer;
+    filter: grayscale(100%);
+    transition: all 0.3s ease;
 }
 
 .star:hover,
 .star.selected {
-   filter: grayscale(0%);
-   transform: scale(1.1);
+    filter: grayscale(0%);
+    transform: scale(1.1);
 }
 
 .review-form {
-   display: flex;
-   flex-direction: column;
-   gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-input {
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.page-btn:hover {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+}
+
+.page-current {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    border-radius: 4px;
+    font-weight: bold;
 }
 `;
 document.head.appendChild(style);
