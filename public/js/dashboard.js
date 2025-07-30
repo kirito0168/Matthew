@@ -98,7 +98,18 @@ async function loadRecentActivity() {
             }
 
             activityList.innerHTML = activities.map(activity => {
-                const details = JSON.parse(activity.details || '{}');
+                // Check if details is already an object or needs parsing
+                let details = {};
+                if (typeof activity.details === 'string') {
+                    try {
+                        details = JSON.parse(activity.details);
+                    } catch (e) {
+                        details = {};
+                    }
+                } else if (typeof activity.details === 'object' && activity.details !== null) {
+                    details = activity.details;
+                }
+
                 return `
                     <div class="activity-item">
                         <div>
@@ -133,16 +144,34 @@ function formatActivityDetails(type, details) {
         case 'vulnerability_reported':
             return `Reported: ${details.title || 'Unknown'}`;
         case 'vulnerability_resolved':
-            return `Resolved: ${details.title || 'Unknown'} (+${details.expReward} EXP)`;
+            return `Resolved: ${details.title || 'Unknown'} (+${details.expReward || 0} EXP)`;
         case 'quest_completed':
-            return `Defeated ${details.bossName || 'Boss'} (+${details.expReward} EXP)`;
+            return `Defeated ${details.bossName || 'Boss'} (+${details.expReward || 0} EXP)`;
         case 'achievement_unlocked':
-            return `${details.achievementName || 'Achievement'} (+${details.expReward} EXP)`;
+            return `${details.achievementName || 'Achievement'} (+${details.expReward || 0} EXP)`;
         case 'level_up':
             return `Reached Level ${details.newLevel || '?'}!`;
+        case 'review_posted':
+            return `Reviewed: ${details.title || 'Unknown'} (${details.rating || 0} stars)`;
         default:
-            return JSON.stringify(details);
+            return 'Activity completed';
     }
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString();
 }
 
 async function loadAchievementProgress() {
@@ -212,10 +241,14 @@ async function loadLatestVulnerabilities() {
             }
 
             vulnerabilitiesList.innerHTML = vulnerabilities.map(vuln => `
-                <div class="vulnerability-item">
+                <div class="vulnerability-item" onclick="window.location.href='/vulnerability.html?id=${vuln.id}'">
                     <div>
                         <div class="vulnerability-title">${vuln.title}</div>
-                        <div class="vulnerability-reporter">by ${vuln.reporter_name || 'Unknown'}</div>
+                        <div class="vulnerability-info">
+                            <span>${vuln.reporter_name || 'Unknown'}</span>
+                            <span>•</span>
+                            <span>${formatDate(vuln.created_at)}</span>
+                        </div>
                     </div>
                     <div class="vulnerability-severity severity-${vuln.severity}">${vuln.severity}</div>
                     <div class="vulnerability-status">${vuln.status}</div>
