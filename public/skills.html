@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Skills - Sword Skills</title>
+    <link rel="stylesheet" href="css/main.css   ">
+    <link rel="stylesheet" href="css/skills.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">SAO System</a>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li class="nav-item"><a href="/quest-game.html" class="nav-link">Quest</a></li>
+                <li class="nav-item"><a href="/blacksmith.html" class="nav-link">Blacksmith</a></li>
+                <li class="nav-item"><a href="/skills.html" class="nav-link active">Skills</a></li>
+                <li class="nav-item"><a href="/profile.html" class="nav-link">Profile</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="logoutBtn">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="skills-container">
+        <!-- Header -->
+        <div class="skills-header">
+            <h1 class="page-title">Sword Skills Training</h1>
+            <p class="page-subtitle">Master powerful sword skills for your battles!</p>
+        </div>
+
+        <!-- Skill Points Display -->
+        <div class="skill-points-display">
+            <div class="points-item">
+                <span class="points-icon">⚡</span>
+                <span class="points-name">Skill Points:</span>
+                <span class="points-amount" id="skillPoints">100</span>
+            </div>
+            <div class="points-item">
+                <span class="points-icon">💠</span>
+                <span class="points-name">Skill Crystals:</span>
+                <span class="points-amount" id="skillCrystals">20</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="skills-content">
+            <!-- Skill Training Section -->
+            <div class="training-section">
+                <h2 class="section-title">Skill Training</h2>
+                
+                <div class="training-options">
+                    <div class="training-option">
+                        <h3>Basic Training</h3>
+                        <p class="training-description">Learn fundamental sword skills</p>
+                        <div class="skill-rates">
+                            <div class="rate-item">Common: 65%</div>
+                            <div class="rate-item">Uncommon: 25%</div>
+                            <div class="rate-item">Rare: 8%</div>
+                            <div class="rate-item">Epic: 2%</div>
+                        </div>
+                        <button class="training-btn" onclick="pullSkill('basic')">
+                            <span class="training-cost">10 Skill Points</span>
+                            <span class="training-text">Train Skill</span>
+                        </button>
+                    </div>
+                    
+                    <div class="training-option advanced">
+                        <h3>Advanced Training</h3>
+                        <p class="training-description">Master legendary sword techniques</p>
+                        <div class="skill-rates">
+                            <div class="rate-item">Uncommon: 40%</div>
+                            <div class="rate-item">Rare: 40%</div>
+                            <div class="rate-item">Epic: 15%</div>
+                            <div class="rate-item">Legendary: 5%</div>
+                        </div>
+                        <button class="training-btn advanced-btn" onclick="pullSkill('advanced')">
+                            <span class="training-cost">5 Skill Crystals</span>
+                            <span class="training-text">Advanced Training</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Multi-pull Options -->
+                <div class="multi-pull-options">
+                    <button class="multi-pull-btn" onclick="pullSkill('basic', 10)">
+                        <span>10x Basic Training</span>
+                        <span class="discount">90 Points (10% off)</span>
+                    </button>
+                    <button class="multi-pull-btn advanced" onclick="pullSkill('advanced', 10)">
+                        <span>10x Advanced Training</span>
+                        <span class="discount">45 Crystals (10% off)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Skills Inventory Section -->
+            <div class="skills-inventory">
+                <h2 class="section-title">Skill Collection</h2>
+                
+                <div class="inventory-tabs">
+                    <button class="tab-btn active" onclick="filterSkills('all')">All</button>
+                    <button class="tab-btn" onclick="filterSkills('legendary')">Legendary</button>
+                    <button class="tab-btn" onclick="filterSkills('epic')">Epic</button>
+                    <button class="tab-btn" onclick="filterSkills('rare')">Rare</button>
+                    <button class="tab-btn" onclick="filterSkills('uncommon')">Uncommon</button>
+                    <button class="tab-btn" onclick="filterSkills('common')">Common</button>
+                </div>
+
+                <div class="skills-grid" id="skillsGrid">
+                    <!-- Skills will be displayed here -->
+                </div>
+                
+                <!-- Skill Actions -->
+                <div class="skill-actions">
+                    <button class="action-btn equip-btn" id="skillEquipBtn" onclick="openEquipModal()" disabled>
+                        Equip Selected Skill
+                    </button>
+                    <button class="action-btn unequip-btn" onclick="unequipAllSkills()">
+                        Unequip All Skills
+                    </button>
+                </div>
+            </div>
+
+            <!-- Equipped Skills Section -->
+            <div class="equipped-skills-section">
+                <h2 class="section-title">Equipped Skills</h2>
+                <p class="equipped-info">Select up to 4 skills for battle</p>
+                
+                <div class="equipped-slots">
+                    <div class="skill-slot" id="slot1" onclick="openSlotSelection(0)">
+                        <span class="slot-number">1</span>
+                        <span class="empty-slot">Empty Slot</span>
+                    </div>
+                    <div class="skill-slot" id="slot2" onclick="openSlotSelection(1)">
+                        <span class="slot-number">2</span>
+                        <span class="empty-slot">Empty Slot</span>
+                    </div>
+                    <div class="skill-slot" id="slot3" onclick="openSlotSelection(2)">
+                        <span class="slot-number">3</span>
+                        <span class="empty-slot">Empty Slot</span>
+                    </div>
+                    <div class="skill-slot" id="slot4" onclick="openSlotSelection(3)">
+                        <span class="slot-number">4</span>
+                        <span class="empty-slot">Empty Slot</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pull Result Modal -->
+    <div class="modal hidden" id="pullResultModal">
+        <div class="modal-content">
+            <div class="skill-animation" id="skillAnimation">
+                <div class="skill-effect"></div>
+            </div>
+            <div class="pull-results hidden" id="pullResults">
+                <h2 class="result-title">Training Complete!</h2>
+                <div class="skill-results" id="skillResults">
+                    <!-- Results will be shown here -->
+                </div>
+                <button class="modal-btn" onclick="closePullModal()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skill Details Modal -->
+    <div class="modal hidden" id="skillDetailsModal">
+        <div class="modal-content skill-details">
+            <h2 class="skill-name" id="modalSkillName">Skill Name</h2>
+            <div class="skill-rarity" id="modalSkillRarity">Rarity</div>
+            
+            <div class="skill-info">
+                <div class="info-row">
+                    <span class="info-label">Damage:</span>
+                    <span class="info-value" id="modalSkillDamage">0x</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cooldown:</span>
+                    <span class="info-value" id="modalSkillCooldown">0s</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Critical Chance:</span>
+                    <span class="info-value" id="modalSkillCrit">0%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value" id="modalSkillType">-</span>
+                </div>
+            </div>
+            
+            <p class="skill-description" id="modalSkillDesc">Description</p>
+            
+            <div class="modal-actions">
+                <button class="equip-btn hidden" id="equipSkillBtn" onclick="equipSkillToSlot()">Equip to Slot</button>
+                <button class="close-btn" onclick="closeDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slot Selection Modal -->
+    <div class="modal hidden" id="slotSelectionModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Select Skill Slot</h2>
+            <p class="modal-subtitle">Choose a slot to equip <span id="selectedSkillName"></span></p>
+            
+            <div class="slot-selection-grid">
+                <button class="slot-select-btn" onclick="equipToSlot(0)">
+                    <span class="slot-label">Slot 1</span>
+                    <span class="current-skill" id="slotPreview1">Empty</span>
+                </button>
+                <button class="slot-select-btn" onclick="equipToSlot(1)">
+                    <span class="slot-label">Slot 2</span>
+                    <span class="current-skill" id="slotPreview2">Empty</span>
+                </button>
+                <button class="slot-select-btn" onclick="equipToSlot(2)">
+                    <span class="slot-label">Slot 3</span>
+                    <span class="current-skill" id="slotPreview3">Empty</span>
+                </button>
+                <button class="slot-select-btn" onclick="equipToSlot(3)">
+                    <span class="slot-label">Slot 4</span>
+                    <span class="current-skill" id="slotPreview4">Empty</span>
+                </button>
+            </div>
+            
+            <button class="close-btn" onclick="closeSlotModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script src="js/skills.js"></script>
+</body>
+</html>

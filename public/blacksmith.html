@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAO Blacksmith - Weapon Forge</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/blacksmith.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">SAO System</a>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li class="nav-item"><a href="/quest-game.html" class="nav-link">Quest</a></li>
+                <li class="nav-item"><a href="/blacksmith.html" class="nav-link active">Blacksmith</a></li>
+                <li class="nav-item"><a href="/skills.html" class="nav-link">Skills</a></li>
+                <li class="nav-item"><a href="/profile.html" class="nav-link">Profile</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="logoutBtn">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="blacksmith-container">
+        <!-- Header -->
+        <div class="blacksmith-header">
+            <h1 class="page-title">Lisbeth's Blacksmith Shop</h1>
+            <p class="page-subtitle">Forge legendary weapons for your adventures!</p>
+        </div>
+
+        <!-- Currency Display -->
+        <div class="currency-display">
+            <div class="currency-item">
+                <span class="currency-icon">💰</span>
+                <span class="currency-name">Col:</span>
+                <span class="currency-amount" id="colAmount">10000</span>
+            </div>
+            <div class="currency-item">
+                <span class="currency-icon">💎</span>
+                <span class="currency-name">Crystals:</span>
+                <span class="currency-amount" id="crystalAmount">50</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="blacksmith-content">
+            <!-- Forge Section -->
+            <div class="forge-section">
+                <h2 class="section-title">Weapon Forge</h2>
+                
+                <div class="forge-options">
+                    <div class="forge-option">
+                        <h3>Basic Forge</h3>
+                        <p class="forge-description">Standard weapon creation</p>
+                        <div class="forge-rates">
+                            <div class="rate-item">Common: 60%</div>
+                            <div class="rate-item">Uncommon: 30%</div>
+                            <div class="rate-item">Rare: 9%</div>
+                            <div class="rate-item">Epic: 1%</div>
+                        </div>
+                        <button class="forge-btn" onclick="pullWeapon('basic')">
+                            <span class="forge-cost">1000 Col</span>
+                            <span class="forge-text">Forge Weapon</span>
+                        </button>
+                    </div>
+                    
+                    <div class="forge-option premium">
+                        <h3>Premium Forge</h3>
+                        <p class="forge-description">Enhanced rates for rare weapons</p>
+                        <div class="forge-rates">
+                            <div class="rate-item">Uncommon: 50%</div>
+                            <div class="rate-item">Rare: 35%</div>
+                            <div class="rate-item">Epic: 12%</div>
+                            <div class="rate-item">Legendary: 3%</div>
+                        </div>
+                        <button class="forge-btn premium-btn" onclick="pullWeapon('premium')">
+                            <span class="forge-cost">10 Crystals</span>
+                            <span class="forge-text">Premium Forge</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Multi-pull Options -->
+                <div class="multi-pull-options">
+                    <button class="multi-pull-btn" onclick="pullWeapon('basic', 10)">
+                        <span>10x Basic Forge</span>
+                        <span class="discount">9000 Col (10% off)</span>
+                    </button>
+                    <button class="multi-pull-btn premium" onclick="pullWeapon('premium', 10)">
+                        <span>10x Premium Forge</span>
+                        <span class="discount">90 Crystals (10% off)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inventory Section -->
+            <div class="inventory-section">
+                <h2 class="section-title">Weapon Inventory</h2>
+                
+                <div class="inventory-tabs">
+                    <button class="tab-btn active" onclick="filterInventory('all')">All</button>
+                    <button class="tab-btn" onclick="filterInventory('legendary')">Legendary</button>
+                    <button class="tab-btn" onclick="filterInventory('epic')">Epic</button>
+                    <button class="tab-btn" onclick="filterInventory('rare')">Rare</button>
+                    <button class="tab-btn" onclick="filterInventory('uncommon')">Uncommon</button>
+                    <button class="tab-btn" onclick="filterInventory('common')">Common</button>
+                </div>
+
+                <div class="inventory-grid" id="inventoryGrid">
+                    <!-- Weapons will be displayed here -->
+                </div>
+                
+                <!-- Equip/Unequip Buttons -->
+                <div class="inventory-actions">
+                    <button class="action-btn equip-btn" id="inventoryEquipBtn" onclick="equipSelectedWeapon()" disabled>
+                        Equip Selected
+                    </button>
+                    <button class="action-btn unequip-btn" onclick="unequipCurrentWeapon()">
+                        Unequip Current
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Currently Equipped -->
+        <div class="equipped-section">
+            <h3>Currently Equipped</h3>
+            <div class="equipped-weapon" id="equippedWeapon">
+                <span class="empty-slot">No weapon equipped</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pull Result Modal -->
+    <div class="modal hidden" id="pullResultModal">
+        <div class="modal-content">
+            <div class="pull-animation" id="pullAnimation">
+                <div class="forge-effect"></div>
+            </div>
+            <div class="pull-results hidden" id="pullResults">
+                <h2 class="result-title">Forging Complete!</h2>
+                <div class="weapon-results" id="weaponResults">
+                    <!-- Results will be shown here -->
+                </div>
+                <button class="modal-btn" onclick="closePullModal()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weapon Details Modal -->
+    <div class="modal hidden" id="weaponDetailsModal">
+        <div class="modal-content weapon-details">
+            <h2 class="weapon-name" id="modalWeaponName">Weapon Name</h2>
+            <div class="weapon-rarity" id="modalWeaponRarity">Rarity</div>
+            
+            <div class="weapon-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Attack:</span>
+                    <span class="stat-value" id="modalWeaponAtk">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Defense:</span>
+                    <span class="stat-value" id="modalWeaponDef">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Special:</span>
+                    <span class="stat-value" id="modalWeaponSpecial">None</span>
+                </div>
+            </div>
+            
+            <p class="weapon-description" id="modalWeaponDesc">Description</p>
+            
+            <div class="modal-actions">
+                <button class="equip-btn" id="equipBtn" onclick="equipWeapon()">Equip</button>
+                <button class="close-btn" onclick="closeDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/blacksmith.js"></script>
+</body>
+</html>

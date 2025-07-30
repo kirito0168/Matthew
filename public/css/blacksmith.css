@@ -1,0 +1,614 @@
+/* SAO Blacksmith Styles */
+
+.blacksmith-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+.blacksmith-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInDown 0.5s ease-out;
+}
+
+.page-title {
+    font-size: 3rem;
+    color: var(--primary-color);
+    text-shadow: 0 0 30px var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+}
+
+/* Currency Display */
+.currency-display {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid var(--primary-color);
+    border-radius: 10px;
+    padding: 1rem;
+    z-index: 100;
+}
+
+.currency-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.currency-icon {
+    font-size: 1.5rem;
+}
+
+.currency-name {
+    color: var(--text-secondary);
+}
+
+.currency-amount {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Forge Section */
+.forge-section {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(255, 140, 0, 0.1));
+    border: 2px solid #ff8c00;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.forge-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 140, 0, 0.1) 0%, transparent 70%);
+    animation: forgeGlow 5s ease-in-out infinite;
+}
+
+@keyframes forgeGlow {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.2) rotate(180deg); }
+}
+
+.section-title {
+    color: #ff8c00;
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 0 0 20px rgba(255, 140, 0, 0.5);
+}
+
+.forge-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.forge-option {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.forge-option.premium {
+    border-color: #ffd700;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(255, 215, 0, 0.1));
+}
+
+.forge-option:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(255, 140, 0, 0.3);
+}
+
+.forge-option h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.forge-option.premium h3 {
+    color: #ffd700;
+}
+
+.forge-description {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.forge-rates {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.rate-item {
+    margin: 0.3rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.forge-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #ff8c00, #ff6347);
+    border: none;
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.forge-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(255, 140, 0, 0.5);
+}
+
+.premium-btn {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #333;
+}
+
+.forge-cost {
+    font-size: 1.3rem;
+}
+
+/* Multi-pull Options */
+.multi-pull-options {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.multi-pull-btn {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--primary-color);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.multi-pull-btn.premium {
+    border-color: #ffd700;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(255, 215, 0, 0.2));
+}
+
+.multi-pull-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+}
+
+.discount {
+    font-size: 0.9rem;
+    color: #00ff00;
+}
+
+/* Inventory Section */
+.inventory-section {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.inventory-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.tab-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.5rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover,
+.tab-btn.active {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+}
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.weapon-card {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.weapon-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+}
+
+.weapon-card.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+    transform: scale(1.05);
+}
+
+.weapon-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 10px currentColor);
+}
+
+.weapon-name {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+    font-weight: bold;
+}
+
+.weapon-stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Inventory Actions */
+.inventory-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.action-btn {
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.equip-btn {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+}
+
+.equip-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.5);
+}
+
+.equip-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.unequip-btn {
+    background: rgba(255, 100, 100, 0.2);
+    border: 2px solid #ff6666;
+    color: #ff6666;
+}
+
+.unequip-btn:hover {
+    background: rgba(255, 100, 100, 0.3);
+    box-shadow: 0 10px 30px rgba(255, 100, 100, 0.3);
+}
+
+/* Rarity Colors */
+.rarity-common {
+    border-color: #ffffff !important;
+}
+.rarity-common .weapon-name,
+.rarity-common .weapon-icon {
+    color: #ffffff;
+}
+
+.rarity-uncommon {
+    border-color: #00ff00 !important;
+}
+.rarity-uncommon .weapon-name,
+.rarity-uncommon .weapon-icon {
+    color: #00ff00;
+}
+
+.rarity-rare {
+    border-color: #0080ff !important;
+}
+.rarity-rare .weapon-name,
+.rarity-rare .weapon-icon {
+    color: #0080ff;
+}
+
+.rarity-epic {
+    border-color: #a335ee !important;
+}
+.rarity-epic .weapon-name,
+.rarity-epic .weapon-icon {
+    color: #a335ee;
+}
+
+.rarity-legendary {
+    border-color: #ff8000 !important;
+    animation: legendaryGlow 2s ease-in-out infinite;
+}
+.rarity-legendary .weapon-name,
+.rarity-legendary .weapon-icon {
+    color: #ff8000;
+}
+
+@keyframes legendaryGlow {
+    0%, 100% { box-shadow: 0 0 20px #ff8000; }
+    50% { box-shadow: 0 0 40px #ff8000, 0 0 60px #ff8000; }
+}
+
+/* Equipped Section */
+.equipped-section {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid var(--primary-color);
+    border-radius: 10px;
+    padding: 1.5rem;
+    min-width: 250px;
+}
+
+.equipped-weapon {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.empty-slot {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Pull Result Modal */
+.pull-animation {
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.forge-effect {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, #ff8c00, transparent);
+    border-radius: 50%;
+    animation: forgeAnimation 2s ease-out;
+}
+
+@keyframes forgeAnimation {
+    0% {
+        transform: scale(0) rotate(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8) rotate(360deg);
+        opacity: 0.5;
+    }
+}
+
+.pull-results {
+    text-align: center;
+}
+
+.result-title {
+    color: var(--primary-color);
+    font-size: 2rem;
+    margin-bottom: 2rem;
+}
+
+.weapon-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.result-weapon {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    animation: resultAppear 0.5s ease-out;
+}
+
+@keyframes resultAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Weapon Details Modal */
+.weapon-details {
+    max-width: 500px;
+}
+
+.weapon-details .weapon-name {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.weapon-details .weapon-rarity {
+    text-align: center;
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.weapon-details .weapon-stats {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.weapon-description {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.equip-btn {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.equip-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.5);
+}
+
+.close-btn {
+    background: rgba(255, 0, 0, 0.2);
+    border: 2px solid #ff6666;
+    color: #ff6666;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    background: rgba(255, 0, 0, 0.3);
+}
+
+/* Hidden class */
+.hidden {
+    display: none !important;
+}
+
+/* Scrollbar Styling */
+.inventory-grid::-webkit-scrollbar,
+.weapon-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.inventory-grid::-webkit-scrollbar-track,
+.weapon-results::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.inventory-grid::-webkit-scrollbar-thumb,
+.weapon-results::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .currency-display {
+        position: static;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+    }
+    
+    .forge-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .multi-pull-options {
+        flex-direction: column;
+    }
+    
+    .equipped-section {
+        position: static;
+        margin-top: 2rem;
+    }
+}

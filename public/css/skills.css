@@ -1,0 +1,639 @@
+/* SAO Skills Styles */
+
+.skills-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+.skills-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInDown 0.5s ease-out;
+}
+
+.page-title {
+    font-size: 3rem;
+    color: var(--primary-color);
+    text-shadow: 0 0 30px var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+}
+
+/* Skill Points Display */
+.skill-points-display {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid var(--primary-color);
+    border-radius: 10px;
+    padding: 1rem;
+    z-index: 100;
+}
+
+.points-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.points-icon {
+    font-size: 1.5rem;
+}
+
+.points-name {
+    color: var(--text-secondary);
+}
+
+.points-amount {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Training Section */
+.training-section {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(138, 43, 226, 0.1));
+    border: 2px solid #8a2be2;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.training-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(138, 43, 226, 0.1) 0%, transparent 70%);
+    animation: skillGlow 4s ease-in-out infinite;
+}
+
+@keyframes skillGlow {
+    0%, 100% { 
+        transform: scale(1) rotate(0deg);
+        opacity: 0.5;
+    }
+    50% { 
+        transform: scale(1.2) rotate(180deg);
+        opacity: 1;
+    }
+}
+
+.section-title {
+    color: #8a2be2;
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+    position: relative;
+    z-index: 1;
+}
+
+.training-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.training-option {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.training-option.advanced {
+    border-color: #9370db;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(147, 112, 219, 0.1));
+}
+
+.training-option:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(138, 43, 226, 0.3);
+}
+
+.training-option h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.training-option.advanced h3 {
+    color: #9370db;
+}
+
+.training-description {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.skill-rates {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.rate-item {
+    margin: 0.3rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.training-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #8a2be2, #9370db);
+    border: none;
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.training-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+}
+
+.advanced-btn {
+    background: linear-gradient(135deg, #9370db, #ba55d3);
+}
+
+.training-cost {
+    font-size: 1.3rem;
+}
+
+/* Skills Inventory */
+.skills-inventory {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.skill-card {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.skill-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(138, 43, 226, 0.3);
+}
+
+.skill-card.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+    transform: scale(1.05);
+}
+
+.skill-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 10px currentColor);
+}
+
+.skill-name {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.skill-type {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem;
+}
+
+.skill-damage {
+    font-size: 0.9rem;
+    color: #ff6666;
+}
+
+/* Skill Actions */
+.skill-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.action-btn {
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.equip-btn {
+    background: #8a2be2;
+    color: white;
+}
+
+.equip-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(138, 43, 226, 0.5);
+}
+
+.equip-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.unequip-btn {
+    background: rgba(255, 100, 100, 0.2);
+    border: 2px solid #ff6666;
+    color: #ff6666;
+}
+
+.unequip-btn:hover {
+    background: rgba(255, 100, 100, 0.3);
+    box-shadow: 0 10px 30px rgba(255, 100, 100, 0.3);
+}
+
+/* Slot Selection Modal */
+.slot-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.slot-select-btn {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.slot-select-btn:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.slot-label {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.current-skill {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.modal-subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+#selectedSkillName {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+/* Equipped Skills Section */
+.equipped-skills-section {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 212, 255, 0.1));
+    border: 2px solid var(--primary-color);
+    border-radius: 15px;
+    padding: 2rem;
+}
+
+.equipped-info {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+}
+
+.equipped-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.skill-slot {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.skill-slot:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.slot-number {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.skill-slot.filled {
+    border-color: var(--primary-color);
+}
+
+.empty-slot {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Rarity Colors for Skills */
+.rarity-common {
+    border-color: #ffffff !important;
+}
+.rarity-common .skill-name,
+.rarity-common .skill-icon {
+    color: #ffffff;
+}
+
+.rarity-uncommon {
+    border-color: #00ff00 !important;
+}
+.rarity-uncommon .skill-name,
+.rarity-uncommon .skill-icon {
+    color: #00ff00;
+}
+
+.rarity-rare {
+    border-color: #0080ff !important;
+}
+.rarity-rare .skill-name,
+.rarity-rare .skill-icon {
+    color: #0080ff;
+}
+
+.rarity-epic {
+    border-color: #a335ee !important;
+}
+.rarity-epic .skill-name,
+.rarity-epic .skill-icon {
+    color: #a335ee;
+}
+
+.rarity-legendary {
+    border-color: #ff8000 !important;
+    animation: legendaryPulse 2s ease-in-out infinite;
+}
+.rarity-legendary .skill-name,
+.rarity-legendary .skill-icon {
+    color: #ff8000;
+}
+
+@keyframes legendaryPulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px #ff8000;
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 40px #ff8000, 0 0 60px #ff8000;
+        transform: scale(1.02);
+    }
+}
+
+/* Skill Animation Modal */
+.skill-animation {
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.skill-effect {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, #8a2be2, transparent);
+    border-radius: 50%;
+    animation: skillAnimation 2s ease-out;
+    position: relative;
+}
+
+.skill-effect::before,
+.skill-effect::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(138, 43, 226, 0.5), transparent);
+}
+
+.skill-effect::before {
+    animation: skillRing 2s ease-out;
+}
+
+.skill-effect::after {
+    animation: skillRing 2s ease-out 0.3s;
+}
+
+@keyframes skillAnimation {
+    0% {
+        transform: scale(0) rotate(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8) rotate(360deg);
+        opacity: 0.5;
+    }
+}
+
+@keyframes skillRing {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+.skill-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.result-skill {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    animation: skillAppear 0.5s ease-out;
+}
+
+@keyframes skillAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8) rotateY(90deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotateY(0);
+    }
+}
+
+/* Skill Details Modal */
+.skill-details {
+    max-width: 500px;
+}
+
+.skill-details .skill-name {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.skill-details .skill-rarity {
+    text-align: center;
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.skill-info {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+}
+
+.info-label {
+    color: var(--text-secondary);
+}
+
+.info-value {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.skill-description {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+/* Scrollbar Styling */
+.skills-grid::-webkit-scrollbar,
+.skill-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.skills-grid::-webkit-scrollbar-track,
+.skill-results::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.skills-grid::-webkit-scrollbar-thumb,
+.skill-results::-webkit-scrollbar-thumb {
+    background: #8a2be2;
+    border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .skill-points-display {
+        position: static;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+    }
+    
+    .training-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .equipped-slots {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .skills-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
