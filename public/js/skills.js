@@ -34,17 +34,13 @@ const skillDatabase = {
     ]
 };
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    updatePointsDisplay();
-    loadInventory();
-    updateEquippedSkills();
-});
-
 // Update points display
 function updatePointsDisplay() {
-    document.getElementById('currentSkillPoints').textContent = gameState.skillPoints.toLocaleString();
-    document.getElementById('currentSkillCrystals').textContent = gameState.skillCrystals.toLocaleString();
+    const pointsElement = document.getElementById('currentSkillPoints');
+    const crystalsElement = document.getElementById('currentSkillCrystals');
+    
+    if (pointsElement) pointsElement.textContent = gameState.skillPoints.toLocaleString();
+    if (crystalsElement) crystalsElement.textContent = gameState.skillCrystals.toLocaleString();
 }
 
 // Save game state
@@ -67,10 +63,55 @@ function getRarityColor(rarity) {
     return colors[rarity] || '#ffffff';
 }
 
-// Pull skills - FIXED FUNCTION NAME TO MATCH HTML
+// Show notification function
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : '#00d4ff'};
+        color: ${type === 'success' ? '#000000' : '#ffffff'};
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        font-weight: bold;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add animation styles if not already present
+    if (!document.getElementById('notificationStyles')) {
+        const style = document.createElement('style');
+        style.id = 'notificationStyles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Pull skills - Main function
 function pullSkill(type, count = 1) {
     const costs = {
-        basic: { points: 10, crystals: 0 },  // Fixed to match HTML
+        basic: { points: 10, crystals: 0 },
         advanced: { points: 0, crystals: 5 }
     };
     
@@ -160,9 +201,9 @@ function showPullAnimation() {
     const animation = document.getElementById('skillAnimation');
     const results = document.getElementById('pullResults');
     
-    modal.classList.remove('hidden');
-    animation.classList.remove('hidden');
-    results.classList.add('hidden');
+    if (modal) modal.classList.remove('hidden');
+    if (animation) animation.classList.remove('hidden');
+    if (results) results.classList.add('hidden');
 }
 
 // Show pull results
@@ -171,27 +212,32 @@ function showPullResults(skills) {
     const results = document.getElementById('pullResults');
     const skillResults = document.getElementById('skillResults');
     
-    animation.classList.add('hidden');
-    results.classList.remove('hidden');
+    if (animation) animation.classList.add('hidden');
+    if (results) results.classList.remove('hidden');
     
-    skillResults.innerHTML = skills.map(skill => `
-        <div class="result-skill rarity-${skill.rarity}">
-            <div class="skill-icon">${skill.icon}</div>
-            <div class="skill-name">${skill.name}</div>
-            <div class="skill-type">${skill.type}</div>
-            <div class="skill-damage">${skill.damage_multiplier}x DMG</div>
-        </div>
-    `).join('');
+    if (skillResults) {
+        skillResults.innerHTML = skills.map(skill => `
+            <div class="result-skill rarity-${skill.rarity}">
+                <div class="skill-icon">${skill.icon}</div>
+                <div class="skill-name">${skill.name}</div>
+                <div class="skill-type">${skill.type}</div>
+                <div class="skill-damage">${skill.damage_multiplier}x DMG</div>
+            </div>
+        `).join('');
+    }
 }
 
 // Close pull modal
 function closePullModal() {
-    document.getElementById('pullResultModal').classList.add('hidden');
+    const modal = document.getElementById('pullResultModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 // Load inventory
 function loadInventory() {
     const grid = document.getElementById('skillsGrid');
+    if (!grid) return;
+    
     const filteredInventory = gameState.filterType === 'all' 
         ? gameState.inventory 
         : gameState.inventory.filter(s => s.rarity === gameState.filterType);
@@ -224,8 +270,10 @@ function selectSkill(skillId) {
     
     // Enable/disable equip button
     const equipBtn = document.getElementById('skillEquipBtn');
-    equipBtn.disabled = false;
-    equipBtn.textContent = skill.equipped ? 'Change Skill Slot' : 'Equip Selected Skill';
+    if (equipBtn) {
+        equipBtn.disabled = false;
+        equipBtn.textContent = skill.equipped ? 'Change Skill Slot' : 'Equip Selected Skill';
+    }
 }
 
 // Open equip modal
@@ -233,21 +281,26 @@ function openEquipModal() {
     if (!gameState.selectedSkill) return;
     
     const modal = document.getElementById('slotSelectionModal');
-    document.getElementById('selectedSkillName').textContent = gameState.selectedSkill.name;
+    const skillNameElement = document.getElementById('selectedSkillName');
+    
+    if (skillNameElement) skillNameElement.textContent = gameState.selectedSkill.name;
     
     // Update slot previews
     gameState.equippedSkills.forEach((skill, index) => {
         const preview = document.getElementById(`slotPreview${index + 1}`);
-        preview.textContent = skill ? skill.name : 'Empty';
-        preview.style.color = skill ? getRarityColor(skill.rarity) : 'var(--text-secondary)';
+        if (preview) {
+            preview.textContent = skill ? skill.name : 'Empty';
+            preview.style.color = skill ? getRarityColor(skill.rarity) : 'var(--text-secondary)';
+        }
     });
     
-    modal.classList.remove('hidden');
+    if (modal) modal.classList.remove('hidden');
 }
 
 // Close slot modal
 function closeSlotModal() {
-    document.getElementById('slotSelectionModal').classList.add('hidden');
+    const modal = document.getElementById('slotSelectionModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 // Equip to specific slot
@@ -304,7 +357,13 @@ function filterSkills(type) {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    
+    // Find the clicked button and add active class
+    const clickedBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+        btn.textContent.toLowerCase().includes(type) || 
+        (type === 'all' && btn.textContent === 'All')
+    );
+    if (clickedBtn) clickedBtn.classList.add('active');
     
     loadInventory();
 }
@@ -317,49 +376,67 @@ function showSkillDetails(skillId) {
     gameState.selectedSkill = skill;
     
     const modal = document.getElementById('skillDetailsModal');
-    document.getElementById('modalSkillName').textContent = skill.name;
-    document.getElementById('modalSkillRarity').textContent = skill.rarity.toUpperCase();
-    document.getElementById('modalSkillRarity').className = `skill-rarity rarity-${skill.rarity}`;
-    document.getElementById('modalSkillDamage').textContent = `${skill.damage_multiplier}x`;
-    document.getElementById('modalSkillCooldown').textContent = `${skill.cooldown}s`;
-    document.getElementById('modalSkillCrit').textContent = `${Math.round(skill.crit_chance * 100)}%`;
-    document.getElementById('modalSkillType').textContent = skill.type;
+    const elements = {
+        name: document.getElementById('modalSkillName'),
+        rarity: document.getElementById('modalSkillRarity'),
+        damage: document.getElementById('modalSkillDamage'),
+        cooldown: document.getElementById('modalSkillCooldown'),
+        crit: document.getElementById('modalSkillCrit'),
+        type: document.getElementById('modalSkillType'),
+        desc: document.getElementById('modalSkillDesc') || document.getElementById('modalSkillDescription')
+    };
+    
+    if (elements.name) elements.name.textContent = skill.name;
+    if (elements.rarity) {
+        elements.rarity.textContent = skill.rarity.toUpperCase();
+        elements.rarity.className = `skill-rarity rarity-${skill.rarity}`;
+    }
+    if (elements.damage) elements.damage.textContent = `${skill.damage_multiplier}x`;
+    if (elements.cooldown) elements.cooldown.textContent = `${skill.cooldown}s`;
+    if (elements.crit) elements.crit.textContent = `${Math.round(skill.crit_chance * 100)}%`;
+    if (elements.type) elements.type.textContent = skill.type;
     
     const descriptions = {
         'Horizontal': 'A basic horizontal slash that cuts through enemies.',
         'Vertical': 'A powerful downward strike.',
         'Slant': 'A diagonal cut that catches enemies off-guard.',
-        'Rage Spike': 'A furious thrust that pierces armor.',
-        'Sonic Leap': 'Charge forward with incredible speed.',
-        'Vorpal Strike': 'A lightning-fast thrust that rarely misses.',
-        'Starburst Stream': 'The legendary 16-hit combo of the Dual Blades.',
-        'The Eclipse': 'Unleash the power of darkness itself.',
-        'Dual Blades: Eclipse': 'Master the art of dual wielding.',
-        'World End': 'A skill that threatens to end everything.'
+        'Rage Spike': 'A piercing thrust that deals massive damage.',
+        'Sonic Leap': 'Dash forward at incredible speed.',
+        'Vorpal Strike': 'A precise strike that always finds its mark.',
+        'Starburst Stream': '16-hit combo with dual blades.',
+        'The Eclipse': 'Darkness consumes all enemies.',
+        'Dual Blades: Eclipse': 'The ultimate dual-wielding technique.',
+        'World End': 'A skill that can end the world itself.'
     };
     
-    document.getElementById('modalSkillDesc').textContent = descriptions[skill.name] || 'A powerful sword skill from Aincrad.';
+    if (elements.desc) {
+        elements.desc.textContent = descriptions[skill.name] || 'A powerful skill from the world of SAO.';
+    }
     
-    // Hide equip button for now
-    document.getElementById('equipSkillBtn').classList.add('hidden');
+    const equipBtn = document.getElementById('modalEquipBtn');
+    if (equipBtn) {
+        equipBtn.textContent = skill.equipped ? 'Change Skill Slot' : 'Equip Skill';
+        equipBtn.onclick = () => {
+            closeDetailsModal();
+            openEquipModal();
+        };
+    }
     
-    modal.classList.remove('hidden');
+    if (modal) modal.classList.remove('hidden');
 }
 
 // Close details modal
 function closeDetailsModal() {
-    document.getElementById('skillDetailsModal').classList.add('hidden');
+    const modal = document.getElementById('skillDetailsModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 // Open slot selection
 function openSlotSelection(slotIndex) {
     gameState.selectedSlot = slotIndex;
     
-    // Show skill selection modal with equip button
-    const modal = document.getElementById('skillDetailsModal');
     const equipBtn = document.getElementById('equipSkillBtn');
     
-    // Show all skills for selection
     if (gameState.inventory.length === 0) {
         showNotification('No skills available to equip!', 'error');
         return;
@@ -367,8 +444,10 @@ function openSlotSelection(slotIndex) {
     
     // Show first skill details
     showSkillDetails(gameState.inventory[0].id);
-    equipBtn.classList.remove('hidden');
-    equipBtn.textContent = `Equip to Slot ${slotIndex + 1}`;
+    if (equipBtn) {
+        equipBtn.classList.remove('hidden');
+        equipBtn.textContent = `Equip to Slot ${slotIndex + 1}`;
+    }
 }
 
 // Equip skill to slot
@@ -401,104 +480,165 @@ function updateEquippedSkills() {
     gameState.equippedSkills.forEach((skill, index) => {
         const slot = document.getElementById(`slot${index + 1}`);
         
-        if (skill) {
-            slot.innerHTML = `
-                <span class="slot-number">${index + 1}</span>
-                <div class="skill-icon" style="font-size: 2rem;">${skill.icon}</div>
-                <div class="skill-name rarity-${skill.rarity}">${skill.name}</div>
-                <div class="skill-type">${skill.type}</div>
-                <div class="skill-damage">${skill.damage_multiplier}x</div>
-            `;
-            slot.classList.add('filled');
-        } else {
-            slot.innerHTML = `
-                <span class="slot-number">${index + 1}</span>
-                <span class="empty-slot">Empty Slot</span>
-            `;
-            slot.classList.remove('filled');
+        if (slot) {
+            if (skill) {
+                slot.innerHTML = `
+                    <span class="slot-number">${index + 1}</span>
+                    <div class="skill-icon" style="font-size: 2rem;">${skill.icon}</div>
+                    <div class="skill-name rarity-${skill.rarity}">${skill.name}</div>
+                    <div class="skill-type">${skill.type}</div>
+                    <div class="skill-damage">${skill.damage_multiplier}x</div>
+                `;
+                slot.classList.add('filled');
+            } else {
+                slot.innerHTML = `
+                    <span class="slot-number">${index + 1}</span>
+                    <span class="empty-slot">Empty Slot</span>
+                `;
+                slot.classList.remove('filled');
+            }
         }
     });
 }
 
-// Show notification
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : '#00d4ff'};
-        color: ${type === 'success' ? '#000' : '#fff'};
-        padding: 1rem 2rem;
-        border-radius: 8px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-        font-weight: bold;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    `;
-    
-    // Add animation keyframes if not already present
-    if (!document.querySelector('#notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notification-styles';
-        style.textContent = `
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.animation = 'slideIn 0.3s ease-out reverse';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+// Close slot selection modal
+function closeSlotSelectionModal() {
+    const modal = document.getElementById('slotSelectionModal');
+    if (modal) modal.classList.add('hidden');
 }
 
-// Add equipped badge styles
-if (!document.querySelector('#equipped-badge-styles')) {
-    const style = document.createElement('style');
-    style.id = 'equipped-badge-styles';
-    style.textContent = `
+// Make functions globally accessible
+window.pullSkill = pullSkill;
+window.filterSkills = filterSkills;
+window.selectSkill = selectSkill;
+window.openEquipModal = openEquipModal;
+window.closeSlotModal = closeSlotModal;
+window.equipToSlot = equipToSlot;
+window.unequipAllSkills = unequipAllSkills;
+window.closePullModal = closePullModal;
+window.showSkillDetails = showSkillDetails;
+window.closeDetailsModal = closeDetailsModal;
+window.openSlotSelection = openSlotSelection;
+window.equipSkillToSlot = equipSkillToSlot;
+window.closeSlotSelectionModal = closeSlotSelectionModal;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Add missing CSS styles
+    const modalStyles = document.createElement('style');
+    modalStyles.textContent = `
+        /* Modal Base Styles */
+        .modal {
+            display: flex !important;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.hidden {
+            display: none !important;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(138, 43, 226, 0.2));
+            border: 2px solid #8a2be2;
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            animation: modalAppear 0.3s ease-out;
+        }
+        
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .modal-btn {
+            background: #8a2be2;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .modal-btn:hover {
+            background: #a855f7;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(138, 43, 226, 0.5);
+        }
+        
+        .result-title {
+            font-size: 2rem;
+            color: #8a2be2;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .skill-description {
+            color: var(--text-secondary);
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        #modalSkillDesc {
+            color: var(--text-secondary);
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .close-btn {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff6666;
+            color: #ff6666;
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 0, 0, 0.3);
+        }
+        
         .equipped-badge {
             position: absolute;
             top: 5px;
             right: 5px;
-            background: #00ff00;
-            color: #000;
-            padding: 2px 8px;
+            background: #8a2be2;
+            color: white;
+            padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: bold;
-            text-transform: uppercase;
-            box-shadow: 0 2px 10px rgba(0, 255, 0, 0.5);
-        }
-        
-        .rarity-common { border-color: #b0b0b0 !important; }
-        .rarity-uncommon { border-color: #00ff00 !important; }
-        .rarity-rare { border-color: #0099ff !important; }
-        .rarity-epic { border-color: #9933ff !important; }
-        .rarity-legendary { 
-            border-color: #ff9900 !important;
-            animation: legendary-glow 2s ease-in-out infinite;
-        }
-        
-        @keyframes legendary-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 153, 0, 0.5); }
-            50% { box-shadow: 0 0 40px rgba(255, 153, 0, 0.8); }
         }
     `;
-    document.head.appendChild(style);
-}
+    document.head.appendChild(modalStyles);
+    
+    updatePointsDisplay();
+    loadInventory();
+    updateEquippedSkills();
+});
