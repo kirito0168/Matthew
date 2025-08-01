@@ -1,12 +1,10 @@
-// Skills JavaScript
-const API_URL = 'http://localhost:3000/api';
-
-// Game State
+// Skills System JavaScript
+// Initialize game state
 let gameState = {
-    skillPoints: 100,
-    skillCrystals: 20,
-    inventory: [],
-    equippedSkills: [null, null, null, null],
+    skillPoints: parseInt(localStorage.getItem('skillPoints')) || 100,
+    skillCrystals: parseInt(localStorage.getItem('skillCrystals')) || 20,
+    inventory: JSON.parse(localStorage.getItem('skillInventory')) || [],
+    equippedSkills: JSON.parse(localStorage.getItem('equippedSkills')) || [null, null, null, null],
     selectedSkill: null,
     selectedSlot: null,
     filterType: 'all'
@@ -15,62 +13,38 @@ let gameState = {
 // Skill Database
 const skillDatabase = {
     common: [
-        { name: 'Horizontal', type: 'Slash', damage_multiplier: 1.2, cooldown: 3, crit_chance: 0.1, icon: '➖' },
-        { name: 'Vertical', type: 'Slash', damage_multiplier: 1.3, cooldown: 3, crit_chance: 0.1, icon: '|' },
-        { name: 'Slant', type: 'Slash', damage_multiplier: 1.25, cooldown: 3, crit_chance: 0.15, icon: '/' },
-        { name: 'Rage Spike', type: 'Thrust', damage_multiplier: 1.4, cooldown: 4, crit_chance: 0.2, icon: '🔺' },
-        { name: 'Sonic Leap', type: 'Charge', damage_multiplier: 1.35, cooldown: 4, crit_chance: 0.1, icon: '⚡' }
+        { name: 'Horizontal', type: 'Sword Skill', damage_multiplier: 1.2, cooldown: 3, crit_chance: 0.1, icon: '⚔️' },
+        { name: 'Vertical', type: 'Sword Skill', damage_multiplier: 1.4, cooldown: 4, crit_chance: 0.15, icon: '🗡️' }
     ],
     uncommon: [
-        { name: 'Vorpal Strike', type: 'Thrust', damage_multiplier: 1.8, cooldown: 5, crit_chance: 0.25, icon: '🗡️' },
-        { name: 'Savage Fulcrum', type: 'Combo', damage_multiplier: 2.0, cooldown: 6, crit_chance: 0.2, icon: '✖️' },
-        { name: 'Howling Octave', type: 'Area', damage_multiplier: 1.6, cooldown: 5, crit_chance: 0.15, icon: '🌀' },
-        { name: 'Lightning Fall', type: 'Aerial', damage_multiplier: 1.9, cooldown: 6, crit_chance: 0.3, icon: '⚡' },
-        { name: 'Embracer', type: 'Grapple', damage_multiplier: 1.7, cooldown: 5, crit_chance: 0.2, icon: '🤲' }
+        { name: 'Slant', type: 'Sword Skill', damage_multiplier: 1.6, cooldown: 5, crit_chance: 0.2, icon: '⚔️' },
+        { name: 'Rage Spike', type: 'Spear Skill', damage_multiplier: 1.8, cooldown: 6, crit_chance: 0.25, icon: '🔱' }
     ],
     rare: [
-        { name: 'Nova Ascension', type: 'Combo', damage_multiplier: 2.5, cooldown: 7, crit_chance: 0.3, icon: '🌟' },
-        { name: 'Deadly Sins', type: 'Multi-Hit', damage_multiplier: 2.8, cooldown: 8, crit_chance: 0.25, icon: '💀' },
-        { name: 'Phantom Rave', type: 'Speed', damage_multiplier: 2.3, cooldown: 6, crit_chance: 0.35, icon: '👻' },
-        { name: 'Mother\'s Rosario', type: 'Combo', damage_multiplier: 3.0, cooldown: 9, crit_chance: 0.3, icon: '🌹' },
-        { name: 'Sharp Nail', type: 'Pierce', damage_multiplier: 2.6, cooldown: 7, crit_chance: 0.4, icon: '💢' }
+        { name: 'Sonic Leap', type: 'Movement Skill', damage_multiplier: 2.0, cooldown: 8, crit_chance: 0.3, icon: '💨' },
+        { name: 'Vorpal Strike', type: 'Rapier Skill', damage_multiplier: 2.2, cooldown: 7, crit_chance: 0.35, icon: '🤺' }
     ],
     epic: [
-        { name: 'The Eclipse', type: 'Ultimate', damage_multiplier: 3.5, cooldown: 10, crit_chance: 0.4, icon: '🌑' },
-        { name: 'Starburst Stream', type: 'Combo', damage_multiplier: 4.0, cooldown: 12, crit_chance: 0.35, icon: '✨' },
-        { name: 'Meteor Break', type: 'Area', damage_multiplier: 3.8, cooldown: 11, crit_chance: 0.45, icon: '☄️' },
-        { name: 'Absolute Sword', type: 'Divine', damage_multiplier: 3.6, cooldown: 10, crit_chance: 0.5, icon: '⚔️' },
-        { name: 'Nebula Empress', type: 'Magic', damage_multiplier: 3.7, cooldown: 11, crit_chance: 0.4, icon: '🌌' }
+        { name: 'Starburst Stream', type: 'Dual Blades', damage_multiplier: 3.0, cooldown: 15, crit_chance: 0.4, icon: '✨' },
+        { name: 'The Eclipse', type: 'Darkness Blade', damage_multiplier: 2.8, cooldown: 12, crit_chance: 0.45, icon: '🌑' }
     ],
     legendary: [
-        { name: 'Dual Blades: Eclipse', type: 'Dual Wield', damage_multiplier: 5.0, cooldown: 15, crit_chance: 0.5, icon: '⚔️⚔️' },
-        { name: 'Alicization: Release Recollection', type: 'Memory', damage_multiplier: 6.0, cooldown: 20, crit_chance: 0.6, icon: '🧠' },
-        { name: 'Incarnate: Starburst Stream', type: 'Incarnation', damage_multiplier: 5.5, cooldown: 18, crit_chance: 0.55, icon: '💫' },
-        { name: 'Godspeed', type: 'Time', damage_multiplier: 4.5, cooldown: 12, crit_chance: 0.7, icon: '⏱️' },
-        { name: 'World End', type: 'Apocalypse', damage_multiplier: 7.0, cooldown: 25, crit_chance: 0.5, icon: '🌍' }
+        { name: 'Dual Blades: Eclipse', type: 'Unique Skill', damage_multiplier: 4.0, cooldown: 20, crit_chance: 0.5, icon: '🌟' },
+        { name: 'World End', type: 'Ultimate Skill', damage_multiplier: 5.0, cooldown: 30, crit_chance: 0.6, icon: '💫' }
     ]
 };
 
-// Initialize
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    loadGameState();
     updatePointsDisplay();
     loadInventory();
     updateEquippedSkills();
-    setupEventListeners();
 });
 
-// Load game state from localStorage
-function loadGameState() {
-    const savedPoints = localStorage.getItem('skillPoints');
-    const savedCrystals = localStorage.getItem('skillCrystals');
-    const savedInventory = localStorage.getItem('skillInventory');
-    const savedEquipped = localStorage.getItem('equippedSkills');
-    
-    if (savedPoints) gameState.skillPoints = parseInt(savedPoints);
-    if (savedCrystals) gameState.skillCrystals = parseInt(savedCrystals);
-    if (savedInventory) gameState.inventory = JSON.parse(savedInventory);
-    if (savedEquipped) gameState.equippedSkills = JSON.parse(savedEquipped);
+// Update points display
+function updatePointsDisplay() {
+    document.getElementById('currentSkillPoints').textContent = gameState.skillPoints.toLocaleString();
+    document.getElementById('currentSkillCrystals').textContent = gameState.skillCrystals.toLocaleString();
 }
 
 // Save game state
@@ -81,16 +55,22 @@ function saveGameState() {
     localStorage.setItem('equippedSkills', JSON.stringify(gameState.equippedSkills));
 }
 
-// Update points display
-function updatePointsDisplay() {
-    document.getElementById('skillPoints').textContent = gameState.skillPoints;
-    document.getElementById('skillCrystals').textContent = gameState.skillCrystals;
+// Get rarity color
+function getRarityColor(rarity) {
+    const colors = {
+        common: '#b0b0b0',
+        uncommon: '#00ff00',
+        rare: '#0099ff',
+        epic: '#9933ff',
+        legendary: '#ff9900'
+    };
+    return colors[rarity] || '#ffffff';
 }
 
-// Pull skill gacha
-async function pullSkill(type, count = 1) {
+// Pull skills - FIXED FUNCTION NAME TO MATCH HTML
+function pullSkill(type, count = 1) {
     const costs = {
-        basic: { points: 10, crystals: 0 },
+        basic: { points: 10, crystals: 0 },  // Fixed to match HTML
         advanced: { points: 0, crystals: 5 }
     };
     
@@ -454,62 +434,71 @@ function showNotification(message, type = 'info') {
         color: ${type === 'success' ? '#000' : '#fff'};
         padding: 1rem 2rem;
         border-radius: 8px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        z-index: 1000;
+        z-index: 10000;
         animation: slideIn 0.3s ease-out;
         font-weight: bold;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     `;
+    
+    // Add animation keyframes if not already present
+    if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
+        notification.style.animation = 'slideIn 0.3s ease-out reverse';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    // Logout
-    document.getElementById('logoutBtn').addEventListener('click', (e) => {
-        e.preventDefault();
-        localStorage.clear();
-        window.location.href = '/login.html';
-    });
-    
-    // Add skill points on level up
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'playerLevel') {
-            // Give bonus skill points on level up
-            gameState.skillPoints += 10;
-            gameState.skillCrystals += 2;
-            updatePointsDisplay();
-            saveGameState();
+// Add equipped badge styles
+if (!document.querySelector('#equipped-badge-styles')) {
+    const style = document.createElement('style');
+    style.id = 'equipped-badge-styles';
+    style.textContent = `
+        .equipped-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #00ff00;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 2px 10px rgba(0, 255, 0, 0.5);
         }
-    });
+        
+        .rarity-common { border-color: #b0b0b0 !important; }
+        .rarity-uncommon { border-color: #00ff00 !important; }
+        .rarity-rare { border-color: #0099ff !important; }
+        .rarity-epic { border-color: #9933ff !important; }
+        .rarity-legendary { 
+            border-color: #ff9900 !important;
+            animation: legendary-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes legendary-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 153, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 153, 0, 0.8); }
+        }
+    `;
+    document.head.appendChild(style);
 }
-
-// CSS for notifications and badges
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); }
-        to { transform: translateX(0); }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); }
-        to { transform: translateX(100%); }
-    }
-    .equipped-badge {
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        background: var(--primary-color);
-        color: var(--dark-bg);
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: bold;
-    }
-`;
-document.head.appendChild(style);
