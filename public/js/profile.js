@@ -61,16 +61,17 @@ function updateProfileDisplay(profile) {
     expBar.style.width = expPercentage + '%';
     expText.textContent = `${currentExp} / ${nextLevelExp}`;
 
-    // Update avatar if exists
-    if (profile.avatar_url) {
-        document.getElementById('playerAvatar').src = profile.avatar_url;
-    }
+    // Animate the exp bar
+    setTimeout(() => {
+        expBar.style.transition = 'width 1s ease-out';
+    }, 100);
 }
 
 async function loadAchievements() {
     const achievementsGrid = document.getElementById('achievementsGrid');
     
     try {
+        // First get all achievements with user's unlock status
         const response = await fetch(`${API_URL}/achievements`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -81,10 +82,17 @@ async function loadAchievements() {
             const data = await response.json();
             const allAchievements = [];
             
-            // Flatten achievements
-            Object.values(data.achievements).forEach(typeAchievements => {
-                allAchievements.push(...typeAchievements);
-            });
+            // Flatten achievements from grouped structure
+            if (data.achievements) {
+                Object.values(data.achievements).forEach(typeAchievements => {
+                    allAchievements.push(...typeAchievements);
+                });
+            }
+
+            if (allAchievements.length === 0) {
+                achievementsGrid.innerHTML = '<p class="no-data">No achievements available</p>';
+                return;
+            }
 
             achievementsGrid.innerHTML = allAchievements.map(achievement => `
                 <div class="achievement-item ${achievement.is_unlocked ? 'unlocked' : 'locked'}">
@@ -99,6 +107,9 @@ async function loadAchievements() {
                     </div>
                 </div>
             `).join('');
+        } else {
+            console.error('Failed to load achievements:', response.status);
+            achievementsGrid.innerHTML = '<p class="error">Error loading achievements</p>';
         }
     } catch (error) {
         console.error('Error loading achievements:', error);
@@ -146,7 +157,21 @@ async function loadActivity() {
     }
 
     activityList.innerHTML = activities.map(activity => {
-        const details = JSON.parse(activity.details || '{}');
+        // Safely parse details - handle both string and object cases
+        let details = {};
+        if (activity.details) {
+            if (typeof activity.details === 'string') {
+                try {
+                    details = JSON.parse(activity.details);
+                } catch (e) {
+                    console.warn('Failed to parse activity details:', activity.details);
+                    details = {};
+                }
+            } else if (typeof activity.details === 'object') {
+                details = activity.details;
+            }
+        }
+        
         return `
             <div class="activity-item">
                 <div>
@@ -176,15 +201,17 @@ function formatActivityDetails(type, details) {
         case 'vulnerability_reported':
             return `Reported: ${details.title || 'Unknown'}`;
         case 'vulnerability_resolved':
-            return `Resolved: ${details.title || 'Unknown'} (+${details.expReward} EXP)`;
+            return `Resolved: ${details.title || 'Unknown'} (+${details.expReward || 0} EXP)`;
         case 'quest_completed':
-            return `Defeated ${details.bossName || 'Boss'} on Floor ${details.floor || '?'} (+${details.expReward} EXP)`;
+            return `Defeated ${details.bossName || 'Boss'} on Floor ${details.floor || '?'} (+${details.expReward || 0} EXP)`;
         case 'achievement_unlocked':
-            return `${details.achievementName || 'Achievement'} (+${details.expReward} EXP)`;
+            return `${details.achievementName || 'Achievement'} (+${details.expReward || 0} EXP)`;
         case 'level_up':
             return `Reached Level ${details.newLevel || '?'}!`;
+        case 'review_posted':
+            return `Reviewed: ${details.title || 'Unknown'}`;
         default:
-            return JSON.stringify(details);
+            return 'Activity completed';
     }
 }
 
@@ -276,21 +303,22 @@ async function openTitleModal() {
             const titles = data.titles;
 
             titlesGrid.innerHTML = titles.map(title => `
-                <div class="title-option ${title.title === profileData.current_title ? 'current' : ''}" 
+                <div class="title-option ${title.title === profileData.current_title ? 'selected' : ''}" 
                      onclick="selectTitle('${title.title}')">
                     <div class="title-name">${title.title}</div>
-                    <div class="title-description">${title.description}</div>
+                    <div class="title-requirement">${title.requirement}</div>
                 </div>
             `).join('');
         }
     } catch (error) {
         console.error('Error loading titles:', error);
-        titlesGrid.innerHTML = '<p class="error">Error loading titles</p>';
+        showNotification('Error loading titles', 'error');
     }
 }
 
 function closeTitleModal() {
-    document.getElementById('titleModal').style.display = 'none';
+    const modal = document.getElementById('titleModal');
+    modal.style.display = 'none';
 }
 
 async function selectTitle(title) {
@@ -298,24 +326,68 @@ async function selectTitle(title) {
         const response = await fetch(`${API_URL}/users/title`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify({ title })
         });
 
         if (response.ok) {
-            showNotification('Title updated successfully!', 'success');
-            document.getElementById('currentTitle').textContent = title;
+            showNotification('Title changed successfully!', 'success');
             profileData.current_title = title;
+            document.getElementById('currentTitle').textContent = title;
             closeTitleModal();
-        } else {
-            const data = await response.json();
-            showNotification(data.message || 'Failed to update title', 'error');
         }
     } catch (error) {
-        console.error('Error updating title:', error);
-        showNotification('Error updating title', 'error');
+        console.error('Error changing title:', error);
+        showNotification('Error changing title', 'error');
+    }
+}
+
+// Utility functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+        if (diffHours === 0) {
+            const diffMinutes = Math.floor(diffTime / (1000 * 60));
+            return diffMinutes === 0 ? 'Just now' : `${diffMinutes}m ago`;
+        }
+        return `${diffHours}h ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+// Animation for stats
+function animateNumbers() {
+    const stats = document.querySelectorAll('.stat-value');
+    stats.forEach(stat => {
+        const finalValue = parseInt(stat.textContent);
+        let currentValue = 0;
+        const increment = Math.ceil(finalValue / 20);
+        const timer = setInterval(() => {
+            currentValue += increment;
+            if (currentValue >= finalValue) {
+                currentValue = finalValue;
+                clearInterval(timer);
+            }
+            stat.textContent = currentValue;
+        }, 50);
+    });
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('titleModal');
+    if (event.target === modal) {
+        closeTitleModal();
     }
 }
 

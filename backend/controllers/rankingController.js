@@ -213,9 +213,9 @@ const getUserRank = async (req, res) => {
     try {
         const userId = req.params.userId || req.userId;
 
-        // Get user's overall rank
+        // Get user's overall rank - Fixed: backticks around 'rank'
         const rankQuery = `
-            SELECT COUNT(*) + 1 as rank
+            SELECT COUNT(*) + 1 as \`rank\`
             FROM users u1
             WHERE (u1.level * 1000 + u1.exp) > (
                 SELECT u2.level * 1000 + u2.exp
