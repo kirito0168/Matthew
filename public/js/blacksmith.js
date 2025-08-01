@@ -6,7 +6,7 @@ let gameState = {
     col: 10000,
     crystals: 50,
     inventory: [],
-    equippedWeapon: null,
+    equippedWeaponId: null, // Store ID instead of object reference
     selectedWeapon: null,
     filterType: 'all'
 };
@@ -64,12 +64,25 @@ function loadGameState() {
     const savedCol = localStorage.getItem('playerCol');
     const savedCrystals = localStorage.getItem('playerCrystals');
     const savedInventory = localStorage.getItem('weaponInventory');
-    const savedEquipped = localStorage.getItem('equippedWeapon');
+    const savedEquippedId = localStorage.getItem('equippedWeaponId');
     
     if (savedCol) gameState.col = parseInt(savedCol);
     if (savedCrystals) gameState.crystals = parseInt(savedCrystals);
-    if (savedInventory) gameState.inventory = JSON.parse(savedInventory);
-    if (savedEquipped) gameState.equippedWeapon = JSON.parse(savedEquipped);
+    if (savedInventory) {
+        gameState.inventory = JSON.parse(savedInventory);
+        // Reset all equipped states
+        gameState.inventory.forEach(weapon => {
+            weapon.equipped = false;
+        });
+    }
+    if (savedEquippedId) {
+        gameState.equippedWeaponId = savedEquippedId;
+        // Find and mark the equipped weapon
+        const equippedWeapon = gameState.inventory.find(w => w.id == savedEquippedId);
+        if (equippedWeapon) {
+            equippedWeapon.equipped = true;
+        }
+    }
 }
 
 // Save game state
@@ -77,9 +90,17 @@ function saveGameState() {
     localStorage.setItem('playerCol', gameState.col);
     localStorage.setItem('playerCrystals', gameState.crystals);
     localStorage.setItem('weaponInventory', JSON.stringify(gameState.inventory));
-    if (gameState.equippedWeapon) {
-        localStorage.setItem('equippedWeapon', JSON.stringify(gameState.equippedWeapon));
+    if (gameState.equippedWeaponId) {
+        localStorage.setItem('equippedWeaponId', gameState.equippedWeaponId);
+    } else {
+        localStorage.removeItem('equippedWeaponId');
     }
+}
+
+// Get currently equipped weapon object
+function getEquippedWeapon() {
+    if (!gameState.equippedWeaponId) return null;
+    return gameState.inventory.find(w => w.id == gameState.equippedWeaponId);
 }
 
 // Update currency display
@@ -252,13 +273,16 @@ function equipSelectedWeapon() {
     if (!gameState.selectedWeapon || gameState.selectedWeapon.equipped) return;
     
     // Unequip current weapon
-    if (gameState.equippedWeapon) {
-        gameState.equippedWeapon.equipped = false;
+    if (gameState.equippedWeaponId) {
+        const currentEquipped = gameState.inventory.find(w => w.id == gameState.equippedWeaponId);
+        if (currentEquipped) {
+            currentEquipped.equipped = false;
+        }
     }
     
     // Equip selected weapon
     gameState.selectedWeapon.equipped = true;
-    gameState.equippedWeapon = gameState.selectedWeapon;
+    gameState.equippedWeaponId = gameState.selectedWeapon.id;
     
     saveGameState();
     updateEquippedWeapon();
@@ -269,14 +293,15 @@ function equipSelectedWeapon() {
 
 // Unequip current weapon
 function unequipCurrentWeapon() {
-    if (!gameState.equippedWeapon) {
+    const currentEquipped = getEquippedWeapon();
+    if (!currentEquipped) {
         showNotification('No weapon equipped!', 'error');
         return;
     }
     
-    const weaponName = gameState.equippedWeapon.name;
-    gameState.equippedWeapon.equipped = false;
-    gameState.equippedWeapon = null;
+    const weaponName = currentEquipped.name;
+    currentEquipped.equipped = false;
+    gameState.equippedWeaponId = null;
     
     saveGameState();
     updateEquippedWeapon();
@@ -352,41 +377,57 @@ function closeDetailsModal() {
     document.getElementById('weaponDetailsModal').classList.add('hidden');
 }
 
-// Equip/Unequip weapon
+// Equip/Unequip weapon from modal
 function equipWeapon() {
     if (!gameState.selectedWeapon) return;
     
-    // Unequip current weapon
-    if (gameState.equippedWeapon) {
-        gameState.equippedWeapon.equipped = false;
+    // If weapon is already equipped, unequip it
+    if (gameState.selectedWeapon.equipped) {
+        const weaponName = gameState.selectedWeapon.name;
+        gameState.selectedWeapon.equipped = false;
+        gameState.equippedWeaponId = null;
+        
+        saveGameState();
+        updateEquippedWeapon();
+        loadInventory();
+        closeDetailsModal();
+        
+        showNotification(`${weaponName} unequipped!`, 'success');
+        return;
     }
     
-    // Toggle equipped state
-    if (gameState.selectedWeapon.equipped) {
-        gameState.selectedWeapon.equipped = false;
-        gameState.equippedWeapon = null;
-    } else {
-        gameState.selectedWeapon.equipped = true;
-        gameState.equippedWeapon = gameState.selectedWeapon;
+    // Unequip current weapon if any
+    if (gameState.equippedWeaponId) {
+        const currentEquipped = gameState.inventory.find(w => w.id == gameState.equippedWeaponId);
+        if (currentEquipped) {
+            currentEquipped.equipped = false;
+        }
     }
+    
+    // Equip selected weapon
+    gameState.selectedWeapon.equipped = true;
+    gameState.equippedWeaponId = gameState.selectedWeapon.id;
     
     saveGameState();
     updateEquippedWeapon();
     loadInventory();
     closeDetailsModal();
+    
+    showNotification(`${gameState.selectedWeapon.name} equipped!`, 'success');
 }
 
 // Update equipped weapon display
 function updateEquippedWeapon() {
     const display = document.getElementById('equippedWeapon');
+    const equippedWeapon = getEquippedWeapon();
     
-    if (gameState.equippedWeapon) {
+    if (equippedWeapon) {
         display.innerHTML = `
             <div class="weapon-info">
-                <div class="weapon-icon" style="font-size: 2rem;">${gameState.equippedWeapon.icon}</div>
-                <div class="weapon-name rarity-${gameState.equippedWeapon.rarity}">${gameState.equippedWeapon.name}</div>
-                <div class="weapon-stats">ATK +${gameState.equippedWeapon.attack} DEF +${gameState.equippedWeapon.defense}</div>
-                ${gameState.equippedWeapon.special ? `<div class="weapon-special">Special: ${gameState.equippedWeapon.special}</div>` : ''}
+                <div class="weapon-icon" style="font-size: 2rem;">${equippedWeapon.icon}</div>
+                <div class="weapon-name rarity-${equippedWeapon.rarity}">${equippedWeapon.name}</div>
+                <div class="weapon-stats">ATK +${equippedWeapon.attack} DEF +${equippedWeapon.defense}</div>
+                ${equippedWeapon.special ? `<div class="weapon-special">Special: ${equippedWeapon.special}</div>` : ''}
             </div>
         `;
     } else {
@@ -404,7 +445,7 @@ function showNotification(message, type = 'info') {
         position: fixed;
         top: 20px;
         right: 20px;
-        background: ${type === 'error' ? '#ff4444' : '#00d4ff'};
+        background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : '#00d4ff'};
         color: white;
         padding: 1rem 2rem;
         border-radius: 8px;

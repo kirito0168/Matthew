@@ -40,7 +40,8 @@ async function loadVulnerabilities() {
 
             if (response.ok) {
                 const data = await response.json();
-                let vulnerabilities = currentTab === 'my-reports' ? data.reported : data.resolved;
+                let vulnerabilities = currentTab === 'my-reports' ? 
+                    data.reported : data.resolved;
                 
                 // Apply filters
                 if (severity) {
@@ -183,15 +184,18 @@ async function handleReportSubmit(e) {
             body: JSON.stringify({ title, description, severity })
         });
 
+        const data = await response.json();
+
         if (response.ok) {
             showNotification('Vulnerability reported successfully! +25 EXP', 'success');
             closeReportModal();
             loadVulnerabilities();
             
-            // Show exp gain animation
-            showSkillActivation();
+            // Show exp gain animation if the function exists
+            if (typeof showSkillActivation === 'function') {
+                showSkillActivation();
+            }
         } else {
-            const data = await response.json();
             showNotification(data.message || 'Failed to report vulnerability', 'error');
         }
     } catch (error) {
@@ -210,9 +214,9 @@ async function viewDetails(id) {
 
     try {
         const response = await fetch(`${API_URL}/vulnerabilities/${id}`);
+        const data = await response.json();
 
         if (response.ok) {
-            const data = await response.json();
             const vuln = data.vulnerability;
 
             detailsDiv.innerHTML = `
@@ -243,6 +247,8 @@ async function viewDetails(id) {
                     </div>` : 
                     ''}
             `;
+        } else {
+            detailsDiv.innerHTML = `<p class="error">${data.message || 'Error loading details'}</p>`;
         }
     } catch (error) {
         console.error('Error loading vulnerability details:', error);
@@ -270,19 +276,28 @@ async function resolveVulnerability(id) {
             body: JSON.stringify({ status: 'resolved' })
         });
 
+        const data = await response.json();
+
         if (response.ok) {
-            showNotification('Vulnerability resolved successfully! Experience gained!', 'success');
-            closeDetailsModal();
-            loadVulnerabilities();
-            
-            // Show quest complete animation
+            // Get vulnerability details to show exp reward
             const vulnResponse = await fetch(`${API_URL}/vulnerabilities/${id}`);
             if (vulnResponse.ok) {
                 const vulnData = await vulnResponse.json();
-                showQuestComplete(vulnData.vulnerability.title, vulnData.vulnerability.exp_reward);
+                const expReward = vulnData.vulnerability.exp_reward;
+                
+                showNotification(`Vulnerability resolved! +${expReward} EXP`, 'success');
+                
+                // Show quest complete animation if available
+                if (typeof showQuestComplete === 'function') {
+                    showQuestComplete(vulnData.vulnerability.title, expReward);
+                }
+            } else {
+                showNotification('Vulnerability resolved successfully!', 'success');
             }
+            
+            closeDetailsModal();
+            loadVulnerabilities();
         } else {
-            const data = await response.json();
             showNotification(data.message || 'Failed to resolve vulnerability', 'error');
         }
     } catch (error) {
@@ -291,7 +306,19 @@ async function resolveVulnerability(id) {
     }
 }
 
-// Add some custom styles for vulnerability cards
+// Helper function to format date
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Add CSS styles
 const style = document.createElement('style');
 style.textContent = `
 .vulnerabilities-container {
@@ -307,12 +334,6 @@ style.textContent = `
     margin-bottom: 2rem;
 }
 
-.page-title {
-    font-size: 2.5rem;
-    color: var(--primary-color);
-    text-shadow: 0 0 20px var(--primary-color);
-}
-
 .filters-section {
     display: flex;
     gap: 1rem;
@@ -320,10 +341,10 @@ style.textContent = `
 }
 
 .filter-select {
-    padding: 0.75rem;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
+    padding: 0.5rem 1rem;
     border-radius: 4px;
     cursor: pointer;
 }
@@ -379,6 +400,7 @@ style.textContent = `
 .vuln-description {
     color: var(--text-secondary);
     margin-bottom: 0.5rem;
+    line-height: 1.6;
 }
 
 .vuln-info {
@@ -423,6 +445,11 @@ style.textContent = `
 .status-resolved { color: var(--success); }
 .status-closed { color: var(--text-secondary); }
 
+.severity-low { color: #4CAF50; }
+.severity-medium { color: #FF9800; }
+.severity-high { color: #F44336; }
+.severity-critical { color: #9C27B0; }
+
 .report-form {
     display: flex;
     flex-direction: column;
@@ -441,6 +468,11 @@ style.textContent = `
 
 .detail-info p {
     margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.detail-info strong {
+    color: var(--text-primary);
 }
 
 .detail-actions {
@@ -476,10 +508,40 @@ style.textContent = `
     border-radius: 4px;
     font-weight: bold;
 }
+
+.no-data {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem;
+    font-size: 1.1rem;
+}
+
+.error {
+    text-align: center;
+    color: var(--error);
+    padding: 2rem;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 3rem;
+}
+
+.loading-spinner::after {
+    content: '⚔️';
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    font-size: 2rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 `;
 document.head.appendChild(style);
 
-// Export functions
+// Export functions to global scope
 window.switchVulnTab = switchVulnTab;
 window.changePage = changePage;
 window.openReportModal = openReportModal;
