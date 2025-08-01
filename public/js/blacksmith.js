@@ -85,15 +85,23 @@ function loadGameState() {
     }
 }
 
-// Save game state
+// Save game state - UPDATED WITH WEAPON SYNC
 function saveGameState() {
     localStorage.setItem('playerCol', gameState.col);
     localStorage.setItem('playerCrystals', gameState.crystals);
     localStorage.setItem('weaponInventory', JSON.stringify(gameState.inventory));
+    
     if (gameState.equippedWeaponId) {
         localStorage.setItem('equippedWeaponId', gameState.equippedWeaponId);
+        
+        // Also save the full weapon object for quest game compatibility
+        const equippedWeapon = getEquippedWeapon();
+        if (equippedWeapon) {
+            localStorage.setItem('equippedWeapon', JSON.stringify(equippedWeapon));
+        }
     } else {
         localStorage.removeItem('equippedWeaponId');
+        localStorage.removeItem('equippedWeapon');
     }
 }
 
@@ -268,7 +276,7 @@ function selectWeapon(weaponId) {
     equipBtn.textContent = weapon.equipped ? 'Already Equipped' : 'Equip Selected';
 }
 
-// Equip selected weapon
+// Equip selected weapon - UPDATED WITH WEAPON SYNC
 function equipSelectedWeapon() {
     if (!gameState.selectedWeapon || gameState.selectedWeapon.equipped) return;
     
@@ -284,14 +292,14 @@ function equipSelectedWeapon() {
     gameState.selectedWeapon.equipped = true;
     gameState.equippedWeaponId = gameState.selectedWeapon.id;
     
-    saveGameState();
+    saveGameState(); // This now also updates equippedWeapon
     updateEquippedWeapon();
     loadInventory();
     
     showNotification(`${gameState.selectedWeapon.name} equipped!`, 'success');
 }
 
-// Unequip current weapon
+// Unequip current weapon - UPDATED WITH WEAPON SYNC
 function unequipCurrentWeapon() {
     const currentEquipped = getEquippedWeapon();
     if (!currentEquipped) {
@@ -303,7 +311,7 @@ function unequipCurrentWeapon() {
     currentEquipped.equipped = false;
     gameState.equippedWeaponId = null;
     
-    saveGameState();
+    saveGameState(); // This now also updates equippedWeapon
     updateEquippedWeapon();
     loadInventory();
     
@@ -377,7 +385,7 @@ function closeDetailsModal() {
     document.getElementById('weaponDetailsModal').classList.add('hidden');
 }
 
-// Equip/Unequip weapon from modal
+// Equip/Unequip weapon from modal - UPDATED WITH WEAPON SYNC
 function equipWeapon() {
     if (!gameState.selectedWeapon) return;
     
@@ -387,7 +395,7 @@ function equipWeapon() {
         gameState.selectedWeapon.equipped = false;
         gameState.equippedWeaponId = null;
         
-        saveGameState();
+        saveGameState(); // This now also updates equippedWeapon
         updateEquippedWeapon();
         loadInventory();
         closeDetailsModal();
@@ -408,7 +416,7 @@ function equipWeapon() {
     gameState.selectedWeapon.equipped = true;
     gameState.equippedWeaponId = gameState.selectedWeapon.id;
     
-    saveGameState();
+    saveGameState(); // This now also updates equippedWeapon
     updateEquippedWeapon();
     loadInventory();
     closeDetailsModal();

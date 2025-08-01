@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPlayerData();
     loadEquippedItems();
     setupEventListeners();
+    watchWeaponChanges(); // Add weapon change monitoring
     
     // Load floors after everything else is initialized
     setTimeout(() => {
@@ -68,23 +69,63 @@ async function loadPlayerData() {
     }
 }
 
-// Load equipped items from localStorage
+// Load equipped items from localStorage - UPDATED WITH WEAPON SYNC
 function loadEquippedItems() {
-    const equippedWeapon = localStorage.getItem('equippedWeapon');
-    const equippedSkills = localStorage.getItem('equippedSkills');
+    // Try to load weapon from the new blacksmith system first
+    const weaponInventory = localStorage.getItem('weaponInventory');
+    const equippedWeaponId = localStorage.getItem('equippedWeaponId');
     
-    if (equippedWeapon) {
-        gameState.player.weapon = JSON.parse(equippedWeapon);
-        updateEquipmentDisplay();
+    if (weaponInventory && equippedWeaponId) {
+        // Load from blacksmith system
+        const inventory = JSON.parse(weaponInventory);
+        const equippedWeapon = inventory.find(w => w.id == equippedWeaponId);
+        
+        if (equippedWeapon) {
+            gameState.player.weapon = equippedWeapon;
+            updateEquipmentDisplay();
+        }
+    } else {
+        // Fallback to old system
+        const equippedWeapon = localStorage.getItem('equippedWeapon');
+        if (equippedWeapon) {
+            gameState.player.weapon = JSON.parse(equippedWeapon);
+            updateEquipmentDisplay();
+        }
     }
     
+    // Load skills
+    const equippedSkills = localStorage.getItem('equippedSkills');
     if (equippedSkills) {
         gameState.player.skills = JSON.parse(equippedSkills);
         updateSkillButtons();
     }
 }
 
-// Update player HUD
+// Watch for weapon changes - NEW FUNCTION
+function watchWeaponChanges() {
+    // Listen for storage changes from other tabs/pages
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'equippedWeaponId' || e.key === 'weaponInventory' || e.key === 'equippedWeapon') {
+            loadEquippedItems();
+            updatePlayerHUD();
+        }
+    });
+    
+    // Check for weapon changes every second (for same tab updates)
+    setInterval(() => {
+        const currentWeaponId = localStorage.getItem('equippedWeaponId');
+        const currentWeapon = gameState.player.weapon;
+        
+        // If weapon ID changed, reload equipment
+        if ((!currentWeaponId && currentWeapon) || 
+            (currentWeaponId && (!currentWeapon || currentWeapon.id != currentWeaponId))) {
+            loadEquippedItems();
+            updatePlayerHUD();
+        }
+    }, 1000);
+}
+
+// Update player HUD - UPDATED WITH WEAPON BONUSES
 function updatePlayerHUD() {
     document.getElementById('playerName').textContent = gameState.player.name;
     document.getElementById('playerLevel').textContent = gameState.player.level;
@@ -96,12 +137,21 @@ function updatePlayerHUD() {
     document.getElementById('expFill').style.width = `${expPercentage}%`;
     document.getElementById('expText').textContent = `${gameState.player.exp}/${gameState.player.expToNext}`;
     
-    // Update stats
-    const totalAtk = gameState.player.baseAtk + (gameState.player.weapon ? gameState.player.weapon.attack : 0);
-    const totalDef = gameState.player.baseDef + (gameState.player.weapon ? gameState.player.weapon.defense : 0);
+    // Update stats with weapon bonuses
+    const weaponAtk = gameState.player.weapon ? gameState.player.weapon.attack : 0;
+    const weaponDef = gameState.player.weapon ? gameState.player.weapon.defense : 0;
+    
+    const totalAtk = gameState.player.baseAtk + weaponAtk;
+    const totalDef = gameState.player.baseDef + weaponDef;
     
     document.getElementById('playerAtk').textContent = totalAtk;
     document.getElementById('playerDef').textContent = totalDef;
+    
+    // Show weapon bonus in parentheses if equipped
+    if (gameState.player.weapon) {
+        document.getElementById('playerAtk').innerHTML = `${totalAtk} <span style="color: #00ff00; font-size: 0.9em;">(+${weaponAtk})</span>`;
+        document.getElementById('playerDef').innerHTML = `${totalDef} <span style="color: #00ff00; font-size: 0.9em;">(+${weaponDef})</span>`;
+    }
     
     // Update HP
     updatePlayerHP();
@@ -112,6 +162,27 @@ function updatePlayerHP() {
     const hpPercentage = (gameState.player.hp / gameState.player.maxHp) * 100;
     document.getElementById('playerHpFill').style.width = `${hpPercentage}%`;
     document.getElementById('playerHpText').textContent = `${Math.ceil(gameState.player.hp)}/${gameState.player.maxHp}`;
+}
+
+// Update equipment display - UPDATED VERSION
+function updateEquipmentDisplay() {
+    const weaponSlot = document.getElementById('equippedWeapon');
+    
+    if (gameState.player.weapon) {
+        const weapon = gameState.player.weapon;
+        weaponSlot.innerHTML = `
+            <div class="weapon-info">
+                <div class="weapon-icon" style="font-size: 1.5rem;">${weapon.icon || '⚔️'}</div>
+                <span class="weapon-name weapon-rarity-${weapon.rarity}">${weapon.name}</span>
+                <span class="weapon-stats">ATK +${weapon.attack} DEF +${weapon.defense}</span>
+                ${weapon.special ? `<span class="weapon-special">${weapon.special}</span>` : ''}
+            </div>
+        `;
+    } else {
+        weaponSlot.innerHTML = '<span class="empty-slot">No weapon equipped</span>';
+    }
+    
+    updatePlayerHUD();
 }
 
 // Load floors
@@ -202,25 +273,35 @@ function startBattle(floor) {
     document.getElementById('bossName').textContent = floor.boss;
     updateBossHP();
     updatePlayerHP();
+    clearBattleLog();
     
-    addBattleLog(`Battle started against ${floor.boss}!`, 'system-message');
+    addBattleLog(`Floor ${floor.floor} Boss Battle Started!`, 'system');
+    addBattleLog(`${floor.boss} appears!`, 'system');
+    
+    // Update skill buttons
+    updateSkillButtons();
 }
 
-// Update boss HP display
+// Update boss HP
 function updateBossHP() {
     const hpPercentage = (gameState.currentBattle.bossHp / gameState.currentBattle.bossMaxHp) * 100;
     document.getElementById('bossHpFill').style.width = `${hpPercentage}%`;
     document.getElementById('bossHpText').textContent = `${Math.ceil(gameState.currentBattle.bossHp)}/${gameState.currentBattle.bossMaxHp}`;
 }
 
-// Add message to battle log
-function addBattleLog(message, className = '') {
-    const battleLog = document.getElementById('battleLog');
-    const p = document.createElement('p');
-    p.textContent = message;
-    if (className) p.className = className;
-    battleLog.appendChild(p);
-    battleLog.scrollTop = battleLog.scrollHeight;
+// Clear battle log
+function clearBattleLog() {
+    document.getElementById('battleLog').innerHTML = '';
+}
+
+// Add to battle log
+function addBattleLog(message, type = 'normal') {
+    const log = document.getElementById('battleLog');
+    const entry = document.createElement('p');
+    entry.className = type;
+    entry.textContent = message;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
 }
 
 // Update skill buttons
@@ -228,70 +309,46 @@ function updateSkillButtons() {
     const skillButtons = document.querySelectorAll('.skill-btn');
     
     skillButtons.forEach((btn, index) => {
-        const skill = gameState.player.skills[index];
-        const skillName = btn.querySelector('.skill-name');
-        const skillCooldown = btn.querySelector('.skill-cooldown');
-        
-        if (skill) {
-            skillName.textContent = skill.name;
+        if (gameState.player.skills[index]) {
+            const skill = gameState.player.skills[index];
+            btn.innerHTML = `
+                <span class="skill-name">${skill.name}</span>
+                <span class="skill-cooldown"></span>
+            `;
             btn.disabled = false;
-            btn.dataset.skillId = skill.id;
-            
-            // Add rarity color
-            btn.style.borderColor = getRarityColor(skill.rarity);
+            btn.setAttribute('data-skill-index', index);
         } else {
-            skillName.textContent = `Skill ${index + 1}`;
+            btn.innerHTML = `
+                <span class="skill-name">Empty Slot</span>
+            `;
             btn.disabled = true;
-            btn.dataset.skillId = null;
         }
-        
-        skillCooldown.textContent = '';
     });
 }
 
-// Get rarity color
-function getRarityColor(rarity) {
-    const colors = {
-        common: '#ffffff',
-        uncommon: '#00ff00',
-        rare: '#0080ff',
-        epic: '#a335ee',
-        legendary: '#ff8000'
-    };
-    return colors[rarity] || colors.common;
-}
-
-// Handle skill use
-async function useSkill(skillSlot) {
-    if (!gameState.inBattle || !gameState.player.skills[skillSlot]) return;
+// Use skill
+async function useSkill(index) {
+    if (!gameState.inBattle || !gameState.player.skills[index]) return;
     
-    const skill = gameState.player.skills[skillSlot];
-    const btn = document.querySelector(`[data-skill-slot="${skillSlot}"]`);
-    
-    if (btn.disabled) return;
-    
-    // Disable button for cooldown
-    btn.disabled = true;
-    btn.classList.add('on-cooldown');
-    
-    // Calculate damage
+    const skill = gameState.player.skills[index];
     const weaponAtk = gameState.player.weapon ? gameState.player.weapon.attack : 0;
     const totalAtk = gameState.player.baseAtk + weaponAtk;
-    const skillDamage = totalAtk * skill.damage_multiplier;
-    const isCritical = Math.random() < skill.crit_chance;
-    const finalDamage = isCritical ? skillDamage * 2 : skillDamage;
+    
+    // Calculate damage
+    const baseDamage = totalAtk * skill.damage_multiplier;
+    const critRoll = Math.random();
+    const isCrit = critRoll < skill.crit_chance;
+    const damage = Math.floor(isCrit ? baseDamage * 2 : baseDamage);
     
     // Apply damage
-    gameState.currentBattle.bossHp -= finalDamage;
+    gameState.currentBattle.bossHp -= damage;
     
-    // Show damage number
-    showDamageNumber(finalDamage, 'player-damage', isCritical);
-    
-    // Add to battle log
-    if (isCritical) {
-        addBattleLog(`CRITICAL! ${skill.name} dealt ${Math.ceil(finalDamage)} damage!`, 'player-action');
+    // Log the attack
+    addBattleLog(`You used ${skill.name}!`, 'player-action');
+    if (isCrit) {
+        addBattleLog(`CRITICAL HIT! ${damage} damage!`, 'player-action');
     } else {
-        addBattleLog(`${skill.name} dealt ${Math.ceil(finalDamage)} damage!`, 'player-action');
+        addBattleLog(`Dealt ${damage} damage!`, 'player-action');
     }
     
     updateBossHP();
@@ -302,79 +359,44 @@ async function useSkill(skillSlot) {
         return;
     }
     
-    // Boss turn
-    setTimeout(() => bossTurn(), 1000);
-    
-    // Cooldown
-    const cooldownTime = skill.cooldown * 1000;
-    const cooldownDisplay = btn.querySelector('.skill-cooldown');
-    let remainingTime = skill.cooldown;
-    
-    const cooldownInterval = setInterval(() => {
-        remainingTime--;
-        cooldownDisplay.textContent = `${remainingTime}s`;
-        
-        if (remainingTime <= 0) {
-            clearInterval(cooldownInterval);
-            btn.disabled = false;
-            btn.classList.remove('on-cooldown');
-            cooldownDisplay.textContent = '';
-        }
-    }, 1000);
+    // Boss counter attack
+    setTimeout(() => bossAttack(), 1000);
 }
 
-// Boss turn
-function bossTurn() {
-    const difficultyMultipliers = {
-        easy: 0.5,
-        medium: 1,
-        hard: 1.5,
-        nightmare: 2
-    };
+// Boss attack
+function bossAttack() {
+    const bossDamage = Math.floor(20 + (gameState.currentBattle.floor * 2));
+    const weaponDef = gameState.player.weapon ? gameState.player.weapon.defense : 0;
+    const totalDef = gameState.player.baseDef + weaponDef;
     
-    const baseDamage = 10 + (gameState.currentBattle.floor * 2);
-    const damage = baseDamage * difficultyMultipliers[gameState.currentBattle.difficulty];
-    const finalDamage = Math.max(1, damage - gameState.player.baseDef);
+    const actualDamage = Math.max(1, bossDamage - totalDef);
+    gameState.player.hp -= actualDamage;
     
-    gameState.player.hp -= finalDamage;
-    
-    showDamageNumber(finalDamage, 'boss-damage');
-    addBattleLog(`${gameState.currentBattle.boss} dealt ${Math.ceil(finalDamage)} damage!`, 'boss-action');
+    addBattleLog(`${gameState.currentBattle.boss} attacks!`, 'boss-action');
+    addBattleLog(`You took ${actualDamage} damage!`, 'boss-action');
     
     updatePlayerHP();
     
+    // Check if player is defeated
     if (gameState.player.hp <= 0) {
         defeat();
     }
-}
-
-// Show damage number animation
-function showDamageNumber(damage, className, isCritical = false) {
-    const battleArea = document.querySelector('.battle-area');
-    const damageEl = document.createElement('div');
-    damageEl.className = `damage-number ${className} ${isCritical ? 'critical' : ''}`;
-    damageEl.textContent = Math.ceil(damage);
-    
-    // Random position near center
-    damageEl.style.left = `${45 + Math.random() * 10}%`;
-    damageEl.style.top = `${40 + Math.random() * 20}%`;
-    
-    battleArea.appendChild(damageEl);
-    
-    // Remove after animation
-    setTimeout(() => damageEl.remove(), 1000);
 }
 
 // Victory
 async function victory() {
     gameState.inBattle = false;
     
-    // Calculate rewards
-    const expGained = gameState.currentBattle.floor * 50;
-    const colEarned = gameState.currentBattle.floor * 100;
+    addBattleLog(`${gameState.currentBattle.boss} defeated!`, 'system');
     
-    // Update player data
-    gameState.player.exp += expGained;
+    // Calculate rewards
+    const expReward = 100 * gameState.currentBattle.floor;
+    const colReward = 500 * gameState.currentBattle.floor;
+    
+    addBattleLog(`Victory! +${expReward} EXP, +${colReward} Col`, 'system');
+    
+    // Update player stats
+    gameState.player.exp += expReward;
     
     // Check for level up
     while (gameState.player.exp >= gameState.player.expToNext) {
@@ -383,59 +405,53 @@ async function victory() {
         gameState.player.baseAtk += 2;
         gameState.player.baseDef += 1;
         gameState.player.maxHp += 10;
-        addBattleLog(`LEVEL UP! You are now level ${gameState.player.level}!`, 'system-message');
+        gameState.player.hp = gameState.player.maxHp;
+        
+        addBattleLog(`LEVEL UP! You are now level ${gameState.player.level}!`, 'system');
     }
+    
+    // Update currency
+    const currentCol = parseInt(localStorage.getItem('playerCol') || '0');
+    localStorage.setItem('playerCol', currentCol + colReward);
     
     // Unlock next floor
-    if (gameState.currentBattle.floor >= gameState.unlockedFloor) {
-        gameState.unlockedFloor = Math.min(gameState.currentBattle.floor + 1, 100);
+    if (gameState.currentBattle.floor === gameState.unlockedFloor) {
+        gameState.unlockedFloor++;
+        localStorage.setItem('unlockedFloor', gameState.unlockedFloor);
     }
     
-    // Show victory modal
-    showResultModal(true, expGained, colEarned);
-    
     // Save progress
-    await saveProgress();
+    saveProgress();
+    updatePlayerHUD();
+    
+    // Show results
+    setTimeout(() => {
+        document.getElementById('resultTitle').textContent = 'Victory!';
+        document.getElementById('resultTitle').className = 'modal-title victory';
+        document.getElementById('expGained').textContent = `+${expReward}`;
+        document.getElementById('colEarned').textContent = `+${colReward}`;
+        document.getElementById('resultModal').classList.remove('hidden');
+    }, 2000);
 }
 
 // Defeat
 function defeat() {
     gameState.inBattle = false;
-    showResultModal(false, 0, 0);
-}
-
-// Show result modal
-function showResultModal(isVictory, expGained, colEarned) {
-    const modal = document.getElementById('resultModal');
-    const title = document.getElementById('resultTitle');
     
-    title.textContent = isVictory ? 'Victory!' : 'Defeat...';
-    title.className = `modal-title ${isVictory ? 'victory' : 'defeat'}`;
+    addBattleLog('You have been defeated...', 'system');
     
-    document.getElementById('expGained').textContent = expGained;
-    document.getElementById('colEarned').textContent = colEarned;
-    
-    // Random item drop chance for victory
-    if (isVictory && Math.random() < 0.3) {
-        const itemReward = document.getElementById('itemReward');
-        itemReward.classList.remove('hidden');
-        document.getElementById('itemName').textContent = generateRandomItem();
-    }
-    
-    modal.classList.remove('hidden');
-}
-
-// Generate random item name
-function generateRandomItem() {
-    const prefixes = ['Ancient', 'Mystic', 'Shadow', 'Crystal', 'Divine'];
-    const items = ['Sword', 'Shield', 'Armor', 'Ring', 'Amulet'];
-    const suffixes = ['of Power', 'of Speed', 'of Protection', 'of Wisdom', 'of Courage'];
-    
-    return `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${items[Math.floor(Math.random() * items.length)]} ${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
+    // Show defeat modal
+    setTimeout(() => {
+        document.getElementById('resultTitle').textContent = 'Defeat';
+        document.getElementById('resultTitle').className = 'modal-title defeat';
+        document.getElementById('expGained').textContent = '0';
+        document.getElementById('colEarned').textContent = '0';
+        document.getElementById('resultModal').classList.remove('hidden');
+    }, 2000);
 }
 
 // Save progress
-async function saveProgress() {
+function saveProgress() {
     try {
         // In a real app, this would save to the server
         localStorage.setItem('playerLevel', gameState.player.level);
@@ -444,24 +460,6 @@ async function saveProgress() {
     } catch (error) {
         console.error('Error saving progress:', error);
     }
-}
-
-// Update equipment display
-function updateEquipmentDisplay() {
-    const weaponSlot = document.getElementById('equippedWeapon');
-    
-    if (gameState.player.weapon) {
-        weaponSlot.innerHTML = `
-            <div class="weapon-info">
-                <span class="weapon-name weapon-rarity-${gameState.player.weapon.rarity}">${gameState.player.weapon.name}</span>
-                <span class="weapon-stats">ATK +${gameState.player.weapon.attack} DEF +${gameState.player.weapon.defense}</span>
-            </div>
-        `;
-    } else {
-        weaponSlot.innerHTML = '<span class="empty-slot">No weapon equipped</span>';
-    }
-    
-    updatePlayerHUD();
 }
 
 // Setup event listeners
