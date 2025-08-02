@@ -50,6 +50,7 @@ async function updateNavigation() {
                 <a href="/dashboard.html" class="dropdown-link">Dashboard</a>
                 <a href="/profile.html" class="dropdown-link">Profile</a>
                 <a href="/vulnerabilities.html" class="dropdown-link">Vulnerabilities</a>
+                <a href="/reports.html" class="dropdown-link">Reports</a>
                 <a href="/quest-game.html" class="dropdown-link">Quests</a>
                 <a href="/reviews.html" class="dropdown-link">Reviews</a>
                 <a href="#" class="dropdown-link" onclick="logout(); return false;">Logout</a>

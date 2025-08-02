@@ -295,3 +295,4 @@ function animateNumbers() {
         }, 30);
     });
 }
+
