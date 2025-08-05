@@ -183,18 +183,6 @@ bcrypt.hash('1234', saltRounds, (error, hash) => {
       (1, 'level_up', '{"level": 1, "message": "Welcome to SAO!"}'),
       (2, 'level_up', '{"level": 1, "message": "Welcome to SAO!"}'),
       (3, 'level_up', '{"level": 1, "message": "Welcome to SAO!"}');
-
-      CREATE TABLE reports (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    vulnerability_id INT NOT NULL,
-    status INT DEFAULT 0 COMMENT '0: Open, 1: In Progress, 2: Resolved, 3: Closed',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (vulnerability_id) REFERENCES vulnerabilities(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_user_vulnerability_report (user_id, vulnerability_id)
-);
       `;
 
     pool.query(SQLSTATEMENT, callback);

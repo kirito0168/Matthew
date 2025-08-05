@@ -2,7 +2,7 @@ const db = require('../config/database');
 const { addExperience, checkAchievements } = require('./userController');
 const { validateRequired, validatePagination, sanitizeInput } = require('../utils/validation');
 
-// Create a new report linking user to vulnerability
+// Create a new report linking user to vulnerability (without transactions)
 const createReport = (req, res) => {
     const { user_id, vulnerability_id } = req.body;
 
@@ -23,190 +23,159 @@ const createReport = (req, res) => {
         });
     }
 
-    // Start transaction to ensure data consistency
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error('Transaction error:', err);
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Server error' 
-            });
-        }
+    // Check if vulnerability exists and get its points
+    db.query(
+        'SELECT id, exp_reward, title FROM vulnerabilities WHERE id = ?',
+        [vulnerability_id],
+        (vulnError, vulnResults) => {
+            if (vulnError) {
+                console.error('Vulnerability lookup error:', vulnError);
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Server error' 
+                });
+            }
 
-        // Check if vulnerability exists and get its points
-        db.query(
-            'SELECT id, exp_reward, title FROM vulnerabilities WHERE id = ?',
-            [vulnerability_id],
-            (vulnError, vulnResults) => {
-                if (vulnError) {
-                    db.rollback();
-                    console.error('Vulnerability lookup error:', vulnError);
-                    return res.status(500).json({ 
-                        success: false, 
-                        message: 'Server error' 
-                    });
-                }
+            if (vulnResults.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Vulnerability not found'
+                });
+            }
 
-                if (vulnResults.length === 0) {
-                    db.rollback();
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Vulnerability not found'
-                    });
-                }
+            const vulnerability = vulnResults[0];
+            const points = vulnerability.exp_reward;
 
-                const vulnerability = vulnResults[0];
-                const points = vulnerability.exp_reward;
+            // Check if user exists
+            db.query(
+                'SELECT id, username, reputation FROM users WHERE id = ?',
+                [user_id],
+                (userError, userResults) => {
+                    if (userError) {
+                        console.error('User lookup error:', userError);
+                        return res.status(500).json({ 
+                            success: false, 
+                            message: 'Server error' 
+                        });
+                    }
 
-                // Check if user exists
-                db.query(
-                    'SELECT id, username, reputation FROM users WHERE id = ?',
-                    [user_id],
-                    (userError, userResults) => {
-                        if (userError) {
-                            db.rollback();
-                            console.error('User lookup error:', userError);
-                            return res.status(500).json({ 
-                                success: false, 
-                                message: 'Server error' 
-                            });
-                        }
+                    if (userResults.length === 0) {
+                        return res.status(404).json({
+                            success: false,
+                            message: 'User not found'
+                        });
+                    }
 
-                        if (userResults.length === 0) {
-                            db.rollback();
-                            return res.status(404).json({
-                                success: false,
-                                message: 'User not found'
-                            });
-                        }
+                    const user = userResults[0];
+                    const currentReputation = user.reputation || 0;
+                    const newReputation = currentReputation + points;
 
-                        const user = userResults[0];
-                        const currentReputation = user.reputation || 0;
-                        const newReputation = currentReputation + points;
+                    // Check if report already exists
+                    db.query(
+                        'SELECT id FROM reports WHERE user_id = ? AND vulnerability_id = ?',
+                        [user_id, vulnerability_id],
+                        (checkError, checkResults) => {
+                            if (checkError) {
+                                console.error('Report check error:', checkError);
+                                return res.status(500).json({ 
+                                    success: false, 
+                                    message: 'Server error' 
+                                });
+                            }
 
-                        // Check if report already exists
-                        db.query(
-                            'SELECT id FROM reports WHERE user_id = ? AND vulnerability_id = ?',
-                            [user_id, vulnerability_id],
-                            (checkError, checkResults) => {
-                                if (checkError) {
-                                    db.rollback();
-                                    console.error('Report check error:', checkError);
-                                    return res.status(500).json({ 
-                                        success: false, 
-                                        message: 'Server error' 
-                                    });
-                                }
+                            if (checkResults.length > 0) {
+                                return res.status(409).json({
+                                    success: false,
+                                    message: 'Report already exists for this user and vulnerability'
+                                });
+                            }
 
-                                if (checkResults.length > 0) {
-                                    db.rollback();
-                                    return res.status(409).json({
-                                        success: false,
-                                        message: 'Report already exists for this user and vulnerability'
-                                    });
-                                }
+                            // Create the report with initial status of 0 (Open)
+                            db.query(
+                                'INSERT INTO reports (user_id, vulnerability_id, status) VALUES (?, ?, ?)',
+                                [user_id, vulnerability_id, 0],
+                                (insertError, insertResult) => {
+                                    if (insertError) {
+                                        console.error('Report creation error:', insertError);
+                                        return res.status(500).json({ 
+                                            success: false, 
+                                            message: 'Server error' 
+                                        });
+                                    }
 
-                                // Create the report with initial status of 0 (Open)
-                                db.query(
-                                    'INSERT INTO reports (user_id, vulnerability_id, status) VALUES (?, ?, ?)',
-                                    [user_id, vulnerability_id, 0],
-                                    (insertError, insertResult) => {
-                                        if (insertError) {
-                                            db.rollback();
-                                            console.error('Report creation error:', insertError);
-                                            return res.status(500).json({ 
-                                                success: false, 
-                                                message: 'Server error' 
-                                            });
-                                        }
+                                    const reportId = insertResult.insertId;
 
-                                        const reportId = insertResult.insertId;
-
-                                        // Update user's reputation
-                                        db.query(
-                                            'UPDATE users SET reputation = ? WHERE id = ?',
-                                            [newReputation, user_id],
-                                            (updateError) => {
-                                                if (updateError) {
-                                                    db.rollback();
-                                                    console.error('Reputation update error:', updateError);
-                                                    return res.status(500).json({ 
-                                                        success: false, 
-                                                        message: 'Server error' 
-                                                    });
-                                                }
-
-                                                // Add experience points
-                                                addExperience(user_id, points, `Linked to vulnerability: ${vulnerability.title}`);
-
-                                                // Check for achievements related to reports
-                                                db.query(
-                                                    'SELECT COUNT(*) as total FROM reports WHERE user_id = ?',
-                                                    [user_id],
-                                                    (countError, countResult) => {
-                                                        if (!countError && countResult.length > 0) {
-                                                            checkAchievements(user_id, 'reports_created', countResult[0].total);
-                                                        }
-                                                    }
-                                                );
-
-                                                // Log activity
-                                                db.query(
-                                                    'INSERT INTO activity_logs (user_id, action_type, details) VALUES (?, ?, ?)',
-                                                    [user_id, 'report_created', JSON.stringify({ 
-                                                        reportId: reportId,
-                                                        vulnerabilityId: vulnerability_id,
-                                                        vulnerabilityTitle: vulnerability.title,
-                                                        pointsAwarded: points
-                                                    })],
-                                                    (logError) => {
-                                                        if (logError) {
-                                                            console.error('Activity log error:', logError);
-                                                        }
-                                                    }
-                                                );
-
-                                                // Commit transaction
-                                                db.commit((commitError) => {
-                                                    if (commitError) {
-                                                        db.rollback();
-                                                        console.error('Commit error:', commitError);
-                                                        return res.status(500).json({ 
-                                                            success: false, 
-                                                            message: 'Server error' 
-                                                        });
-                                                    }
-
-                                                    // Return success response
-                                                    res.status(201).json({
-                                                        success: true,
-                                                        message: 'Report created successfully',
-                                                        report: {
-                                                            id: reportId,
-                                                            user_id: user_id,
-                                                            vulnerability_id: vulnerability_id,
-                                                            status: 0
-                                                        },
-                                                        user: {
-                                                            id: user_id,
-                                                            username: user.username,
-                                                            previousReputation: currentReputation,
-                                                            updatedReputation: newReputation,
-                                                            pointsAwarded: points
-                                                        }
-                                                    });
+                                    // Update user's reputation
+                                    db.query(
+                                        'UPDATE users SET reputation = ? WHERE id = ?',
+                                        [newReputation, user_id],
+                                        (updateError) => {
+                                            if (updateError) {
+                                                console.error('Reputation update error:', updateError);
+                                                return res.status(500).json({ 
+                                                    success: false, 
+                                                    message: 'Server error' 
                                                 });
                                             }
-                                        );
-                                    }
-                                );
-                            }
-                        );
-                    }
-                );
-            }
-        );
-    });
+
+                                            // Add experience points
+                                            addExperience(user_id, points, `Linked to vulnerability: ${vulnerability.title}`);
+
+                                            // Check for achievements related to reports
+                                            db.query(
+                                                'SELECT COUNT(*) as total FROM reports WHERE user_id = ?',
+                                                [user_id],
+                                                (countError, countResult) => {
+                                                    if (!countError && countResult.length > 0) {
+                                                        checkAchievements(user_id, 'reports_created', countResult[0].total);
+                                                    }
+                                                }
+                                            );
+
+                                            // Log activity
+                                            db.query(
+                                                'INSERT INTO activity_logs (user_id, action_type, details) VALUES (?, ?, ?)',
+                                                [user_id, 'report_created', JSON.stringify({ 
+                                                    reportId: reportId,
+                                                    vulnerabilityId: vulnerability_id,
+                                                    vulnerabilityTitle: vulnerability.title,
+                                                    pointsAwarded: points
+                                                })],
+                                                (logError) => {
+                                                    if (logError) {
+                                                        console.error('Activity log error:', logError);
+                                                    }
+                                                }
+                                            );
+
+                                            // Return success response
+                                            res.status(201).json({
+                                                success: true,
+                                                message: 'Report created successfully',
+                                                report: {
+                                                    id: reportId,
+                                                    user_id: user_id,
+                                                    vulnerability_id: vulnerability_id,
+                                                    status: 0
+                                                },
+                                                user: {
+                                                    id: user_id,
+                                                    username: user.username,
+                                                    previousReputation: currentReputation,
+                                                    updatedReputation: newReputation,
+                                                    pointsAwarded: points
+                                                }
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
 };
 
 // Get all reports with pagination and filters

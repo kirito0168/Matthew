@@ -13,6 +13,7 @@ const reviewRoutes = require('../routes/reviewRoutes');
 const questRoutes = require('../routes/questRoutes');
 const rankingRoutes = require('../routes/rankingRoutes');
 const achievementRoutes = require('../routes/achievementRoutes');
+const reportRoutes = require('../routes/reportRoutes');
 
 //////////////////////////////////////////////////////
 // CREATE APP
@@ -46,6 +47,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/rankings', rankingRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Contact endpoint (no auth required)
 app.post('/api/contact', (req, res) => {
