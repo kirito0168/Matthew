@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAO Bug Bounty - Reports</title>
+    <title>SAO Bug Bounty - Player Reviews</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
@@ -18,10 +18,14 @@
         <div class="nav-container">
             <div class="nav-logo">
                 <span class="logo-text">SAO Bug Bounty</span>
-                <div class="logo-subtitle">Report Management</div>
+                <div class="logo-subtitle">Player Testimonials</div>
             </div>
             <ul class="nav-menu">
                 <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="/vulnerabilities.html" class="nav-link">Vulnerabilities</a></li>
+                <li><a href="/quests.html" class="nav-link">Quests</a></li>
+                <li><a href="/reports.html" class="nav-link active">Reviews</a></li>
                 <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
                 <li><a href="/contact.html" class="nav-link">Contact</a></li>
                 <li class="nav-auth"></li>
@@ -29,75 +33,54 @@
         </div>
     </nav>
 
-    <main class="reports-container">
-        <div class="reports-header">
-            <h1 class="page-title">Report Management System</h1>
-            <button class="btn-primary" onclick="openCreateReportModal()">
-                <span class="btn-icon">+</span>
-                Create New Report
-            </button>
+    <main class="reviews-container">
+        <div class="reviews-header">
+            <h1 class="page-title glitch" data-text="PLAYER REVIEWS">PLAYER REVIEWS</h1>
+            <p class="page-subtitle">What our bug hunters are saying</p>
+            <button class="btn-primary" onclick="openReviewModal()">Write Review</button>
         </div>
 
-        <div class="filters-section">
-            <select id="statusFilter" class="filter-select" onchange="loadReports()">
-                <option value="">All Status</option>
-                <option value="0">Open</option>
-                <option value="1">In Progress</option>
-                <option value="2">Resolved</option>
-                <option value="3">Closed</option>
-            </select>
-            <div class="filter-info">
-                <span id="totalReports">0</span> Total Reports
+        <div class="reviews-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalReviews">0</div>
+                <div class="stat-label">Total Reviews</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="averageRating">0.0</div>
+                <div class="stat-label">Average Rating</div>
             </div>
         </div>
 
-        <div class="reports-tabs">
-            <button class="tab-btn active" onclick="switchReportTab('all')">All Reports</button>
-            <button class="tab-btn" onclick="switchReportTab('my-reports')">My Reports</button>
-        </div>
-
-        <div class="reports-list" id="reportsList">
+        <div class="reviews-list" id="reviewsList">
             <div class="loading-spinner"></div>
         </div>
 
         <div class="pagination" id="pagination"></div>
     </main>
 
-    <!-- Create Report Modal -->
-    <div class="modal" id="createReportModal">
+    <!-- Review Modal -->
+    <div class="modal" id="reviewModal">
         <div class="modal-content">
-            <span class="modal-close" onclick="closeCreateReportModal()">&times;</span>
-            <h2 class="modal-title">Create New Report</h2>
-            <form id="createReportForm" class="report-form">
+            <span class="modal-close" onclick="closeReviewModal()">&times;</span>
+            <h2 class="modal-title">Write Your Review</h2>
+            <form id="reviewForm" class="review-form">
                 <div class="form-group">
-                    <label class="form-label">User ID</label>
-                    <input type="number" id="userId" class="form-input" required 
-                           placeholder="Enter User ID to link to vulnerability">
+                    <label class="form-label">Rating</label>
+                    <div class="star-rating" id="starRating">
+                        <span class="star" data-rating="1">⭐</span>
+                        <span class="star" data-rating="2">⭐</span>
+                        <span class="star" data-rating="3">⭐</span>
+                        <span class="star" data-rating="4">⭐</span>
+                        <span class="star" data-rating="5">⭐</span>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Vulnerability ID</label>
-                    <input type="number" id="vulnerabilityId" class="form-input" required 
-                           placeholder="Enter Vulnerability ID">
+                    <label class="form-label">Your Review</label>
+                    <textarea id="reviewComment" class="form-textarea" rows="5" required
+                              placeholder="Share your experience with the SAO Bug Bounty System..."></textarea>
                 </div>
-                <div class="form-info">
-                    <p>This will create a report linking the specified user to the vulnerability and award them reputation points.</p>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Create Report</button>
-                    <button type="button" class="btn-secondary" onclick="closeCreateReportModal()">Cancel</button>
-                </div>
+                <button type="submit" class="btn-submit">Submit Review</button>
             </form>
-        </div>
-    </div>
-
-    <!-- Report Details Modal -->
-    <div class="modal" id="reportDetailsModal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeReportDetailsModal()">&times;</span>
-            <h2 class="modal-title" id="reportDetailsTitle">Report Details</h2>
-            <div class="report-details" id="reportDetails">
-                <div class="loading-spinner"></div>
-            </div>
         </div>
     </div>
 

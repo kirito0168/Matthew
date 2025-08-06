@@ -1,120 +1,151 @@
+// Reports/Reviews JavaScript
 
-// Reports JavaScript
-
-let currentTab = 'all';
+let selectedRating = 0;
 let currentPage = 1;
 const itemsPerPage = 10;
-let currentUser = null;
+let editingReviewId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Require authentication
-    currentUser = await requireAuth();
-    if (!currentUser) return;
-
-    // Load reports
+    // Update navigation first
+    await updateNavigation();
+    
+    // Check if user is logged in but don't require auth for viewing
+    const user = await checkAuth();
+    
+    // Load reviews
     await loadReports();
 
-    // Setup form handler
-    document.getElementById('createReportForm').addEventListener('submit', handleCreateReport);
+    // Setup star rating if user is logged in
+    if (user) {
+        setupStarRating();
+        // Setup form handler
+        document.getElementById('reviewForm').addEventListener('submit', handleReviewSubmit);
+    } else {
+        // Hide write review button if not logged in
+        const writeButton = document.querySelector('.btn-primary');
+        if (writeButton) {
+            writeButton.style.display = 'none';
+        }
+    }
 });
 
 async function loadReports() {
-    const reportsList = document.getElementById('reportsList');
-    reportsList.innerHTML = '<div class="loading-spinner"></div>';
+    const reviewsList = document.getElementById('reviewsList');
+    reviewsList.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-        let url = `${API_URL}/reports?page=${currentPage}&limit=${itemsPerPage}`;
-        
-        // Add status filter
-        const status = document.getElementById('statusFilter').value;
-        if (status !== '') {
-            url += `&status=${status}`;
-        }
-
-        // Handle different tabs
-        if (currentTab === 'my-reports') {
-            url = `${API_URL}/reports/user/${currentUser.id}?page=${currentPage}&limit=${itemsPerPage}`;
-        }
-
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
+        const response = await fetch(`${API_URL}/reviews?page=${currentPage}&limit=${itemsPerPage}`);
 
         if (response.ok) {
             const data = await response.json();
-            displayReports(data.reports);
-            
-            if (data.pagination) {
-                displayPagination(data.pagination);
-                document.getElementById('totalReports').textContent = data.pagination.total;
-            }
+            console.log('Reviews data:', data); // Debug log
+            displayReviews(data.reviews);
+            displayPagination(data.pagination);
+            updateStats(data.pagination.total, data.averageRating);
         } else {
-            throw new Error('Failed to load reports');
+            throw new Error('Failed to load reviews');
         }
     } catch (error) {
         console.error('Error loading reports:', error);
-        reportsList.innerHTML = '<p class="error">Error loading reports</p>';
+        reviewsList.innerHTML = '<p class="error">Error loading reviews. Please try again later.</p>';
     }
 }
 
-function displayReports(reports) {
-    const reportsList = document.getElementById('reportsList');
+function displayReviews(reviews) {
+    const reviewsList = document.getElementById('reviewsList');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-    if (reports.length === 0) {
-        reportsList.innerHTML = '<p class="no-data">No reports found</p>';
+    if (!reviews || reviews.length === 0) {
+        reviewsList.innerHTML = '<p class="no-data">No reviews yet. Be the first to write one!</p>';
         return;
     }
 
-    const statusNames = ['Open', 'In Progress', 'Resolved', 'Closed'];
-    const statusClasses = ['open', 'in-progress', 'resolved', 'closed'];
-
-    reportsList.innerHTML = reports.map(report => `
-        <div class="report-card">
-            <div class="report-header">
-                <h3 class="report-title">Report #${report.id}</h3>
-                <div class="report-meta">
-                    <span class="report-status status-${statusClasses[report.status]}">${statusNames[report.status]}</span>
-                    <span class="report-points">+${report.vulnerability_points} Points</span>
-                </div>
-            </div>
-            <div class="report-body">
-                <div class="report-info">
-                    <div class="info-row">
-                        <span class="info-label">User:</span>
-                        <span class="info-value">${report.username} (ID: ${report.user_id})</span>
+    reviewsList.innerHTML = reviews.map(review => `
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-user">
+                    <div class="user-avatar">
+                        <img src="${review.avatar_url || '/img/default-avatar.png'}" alt="${review.username}">
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Vulnerability:</span>
-                        <span class="info-value">${report.vulnerability_title} 
-                            <span class="severity severity-${report.vulnerability_severity}">${report.vulnerability_severity}</span>
-                        </span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">User Reputation:</span>
-                        <span class="info-value">${report.user_reputation}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Created:</span>
-                        <span class="info-value">${formatDate(report.created_at)}</span>
+                    <div class="user-info">
+                        <h3 class="user-name">${escapeHtml(review.username)}</h3>
+                        <div class="user-level">Level ${review.level}</div>
                     </div>
                 </div>
+                <div class="review-rating">
+                    ${generateStars(review.rating)}
+                </div>
             </div>
-            <div class="report-actions">
-                <button class="btn-action" onclick="viewReportDetails(${report.id})">View Details</button>
-                ${report.status < 3 ? 
-                    `<button class="btn-action btn-status" onclick="updateStatus(${report.id}, ${report.status})">Update Status</button>` : 
+            <div class="review-body">
+                <p class="review-comment">${escapeHtml(review.comment)}</p>
+                ${review.vulnerability_title ? 
+                    `<div class="review-context">Regarding: ${escapeHtml(review.vulnerability_title)}</div>` : 
                     ''}
+                <div class="review-date">${formatDate(review.created_at)}</div>
             </div>
+            ${currentUser.id === review.user_id ? `
+                <div class="review-actions">
+                    <button class="btn-action btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${escapeHtml(review.comment).replace(/'/g, "\\'")}')">Edit</button>
+                    <button class="btn-action btn-delete" onclick="deleteReview(${review.id})">Delete</button>
+                </div>
+            ` : ''}
         </div>
     `).join('');
+}
+
+function updateStats(total, average) {
+    document.getElementById('totalReviews').textContent = total || 0;
+    // Fix the toFixed error by ensuring average is a number
+    const avgRating = parseFloat(average) || 0;
+    document.getElementById('averageRating').textContent = avgRating.toFixed(1);
+}
+
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        stars += `<span class="star ${i <= rating ? 'filled' : ''}">⭐</span>`;
+    }
+    return stars;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+        if (diffHours === 0) {
+            const diffMins = Math.floor(diffTime / (1000 * 60));
+            return diffMins <= 1 ? 'Just now' : `${diffMins} minutes ago`;
+        }
+        return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+    } else if (diffDays === 1) {
+        return 'Yesterday';
+    } else if (diffDays < 30) {
+        return `${diffDays} days ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
 }
 
 function displayPagination(pagination) {
     const paginationDiv = document.getElementById('pagination');
     
-    if (pagination.totalPages <= 1) {
+    if (!pagination || pagination.totalPages <= 1) {
         paginationDiv.innerHTML = '';
         return;
     }
@@ -127,7 +158,11 @@ function displayPagination(pagination) {
     }
 
     // Page numbers
-    for (let i = 1; i <= pagination.totalPages; i++) {
+    const maxPages = 5;
+    const startPage = Math.max(1, pagination.page - Math.floor(maxPages / 2));
+    const endPage = Math.min(pagination.totalPages, startPage + maxPages - 1);
+
+    for (let i = startPage; i <= endPage; i++) {
         if (i === pagination.page) {
             html += `<span class="page-current">${i}</span>`;
         } else {
@@ -149,247 +184,367 @@ function changePage(page) {
     loadReports();
 }
 
-function switchReportTab(tab) {
-    currentTab = tab;
-    currentPage = 1;
-    
-    // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
+// Star rating setup
+function setupStarRating() {
+    const stars = document.querySelectorAll('#starRating .star');
+    stars.forEach((star, index) => {
+        star.addEventListener('click', () => {
+            selectedRating = index + 1;
+            updateStarDisplay(selectedRating);
+        });
+        
+        star.addEventListener('mouseenter', () => {
+            updateStarDisplay(index + 1);
+        });
     });
-    event.target.classList.add('active');
     
-    loadReports();
+    document.getElementById('starRating').addEventListener('mouseleave', () => {
+        updateStarDisplay(selectedRating);
+    });
+}
+
+function updateStarDisplay(rating) {
+    const stars = document.querySelectorAll('#starRating .star');
+    stars.forEach((star, index) => {
+        star.classList.toggle('selected', index < rating);
+    });
 }
 
 // Modal functions
-function openCreateReportModal() {
-    document.getElementById('createReportModal').style.display = 'block';
+function openReviewModal() {
+    document.getElementById('reviewModal').style.display = 'block';
+    editingReviewId = null;
+    selectedRating = 0;
+    updateStarDisplay(0);
+    document.getElementById('reviewComment').value = '';
+    document.querySelector('.modal-title').textContent = 'Write Your Review';
+    document.querySelector('.btn-submit').textContent = 'Submit Review';
 }
 
-function closeCreateReportModal() {
-    document.getElementById('createReportModal').style.display = 'none';
-    document.getElementById('createReportForm').reset();
+function closeReviewModal() {
+    document.getElementById('reviewModal').style.display = 'none';
+    document.getElementById('reviewForm').reset();
+    editingReviewId = null;
+    selectedRating = 0;
+    updateStarDisplay(0);
 }
 
-function closeReportDetailsModal() {
-    document.getElementById('reportDetailsModal').style.display = 'none';
+function editReview(id, rating, comment) {
+    editingReviewId = id;
+    selectedRating = rating;
+    document.getElementById('reviewComment').value = comment;
+    updateStarDisplay(rating);
+    document.querySelector('.modal-title').textContent = 'Edit Your Review';
+    document.querySelector('.btn-submit').textContent = 'Update Review';
+    document.getElementById('reviewModal').style.display = 'block';
 }
 
-async function handleCreateReport(e) {
+async function handleReviewSubmit(e) {
     e.preventDefault();
 
-    const userId = parseInt(document.getElementById('userId').value);
-    const vulnerabilityId = parseInt(document.getElementById('vulnerabilityId').value);
+    if (selectedRating === 0) {
+        showNotification('Please select a rating', 'error');
+        return;
+    }
 
+    const comment = document.getElementById('reviewComment').value;
+    
     try {
-        const response = await fetch(`${API_URL}/reports`, {
-            method: 'POST',
+        const url = editingReviewId 
+            ? `${API_URL}/reviews/${editingReviewId}`
+            : `${API_URL}/reviews`;
+            
+        const method = editingReviewId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 
-                user_id: userId, 
-                vulnerability_id: vulnerabilityId 
+                rating: selectedRating, 
+                comment 
             })
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            showNotification(`Report created successfully! User ${data.user.username} awarded ${data.user.pointsAwarded} points. New reputation: ${data.user.updatedReputation}`, 'success');
-            closeCreateReportModal();
+            showNotification(editingReviewId ? 'Review updated successfully!' : 'Review submitted successfully!', 'success');
+            closeReviewModal();
             loadReports();
         } else {
-            showNotification(data.message || 'Error creating report', 'error');
+            throw new Error(data.message || 'Failed to submit review');
         }
     } catch (error) {
-        console.error('Error creating report:', error);
-        showNotification('Error creating report', 'error');
+        console.error('Error submitting review:', error);
+        showNotification(error.message || 'Error submitting review', 'error');
     }
 }
 
-async function viewReportDetails(reportId) {
-    const modal = document.getElementById('reportDetailsModal');
-    const detailsDiv = document.getElementById('reportDetails');
-    
-    modal.style.display = 'block';
-    detailsDiv.innerHTML = '<div class="loading-spinner"></div>';
+async function deleteReview(id) {
+    if (!confirm('Are you sure you want to delete this review?')) {
+        return;
+    }
 
     try {
-        const response = await fetch(`${API_URL}/reports/${reportId}`, {
+        const response = await fetch(`${API_URL}/reviews/${id}`, {
+            method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         });
 
         if (response.ok) {
-            const data = await response.json();
-            const report = data.report;
-            
-            const statusNames = ['Open', 'In Progress', 'Resolved', 'Closed'];
-            const statusClasses = ['open', 'in-progress', 'resolved', 'closed'];
-
-            detailsDiv.innerHTML = `
-                <div class="detail-section">
-                    <h3>Report Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Report ID:</span>
-                            <span class="detail-value">#${report.id}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Status:</span>
-                            <span class="detail-value status-${statusClasses[report.status]}">${statusNames[report.status]}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Created:</span>
-                            <span class="detail-value">${formatDate(report.created_at)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Updated:</span>
-                            <span class="detail-value">${formatDate(report.updated_at)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="detail-section">
-                    <h3>User Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Username:</span>
-                            <span class="detail-value">${report.username}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">User ID:</span>
-                            <span class="detail-value">${report.user_id}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Reputation:</span>
-                            <span class="detail-value">${report.user_reputation}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="detail-section">
-                    <h3>Vulnerability Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Title:</span>
-                            <span class="detail-value">${report.vulnerability_title}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Severity:</span>
-                            <span class="detail-value severity-${report.vulnerability_severity}">${report.vulnerability_severity}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Points:</span>
-                            <span class="detail-value">+${report.vulnerability_points}</span>
-                        </div>
-                    </div>
-                    <div class="detail-description">
-                        <span class="detail-label">Description:</span>
-                        <p>${report.vulnerability_description}</p>
-                    </div>
-                </div>
-
-                ${report.status < 3 ? `
-                    <div class="detail-actions">
-                        <button class="btn-primary" onclick="updateStatus(${report.id}, ${report.status})">
-                            Update Status
-                        </button>
-                    </div>
-                ` : ''}
-            `;
-
-            document.getElementById('reportDetailsTitle').textContent = `Report #${report.id} Details`;
-        } else {
-            throw new Error('Failed to load report details');
-        }
-    } catch (error) {
-        console.error('Error loading report details:', error);
-        detailsDiv.innerHTML = '<p class="error">Error loading report details</p>';
-    }
-}
-
-async function updateStatus(reportId, currentStatus) {
-    const statusNames = ['Open', 'In Progress', 'Resolved', 'Closed'];
-    const nextStatus = currentStatus + 1;
-
-    if (nextStatus > 3) return;
-
-    const confirmed = confirm(`Update status from "${statusNames[currentStatus]}" to "${statusNames[nextStatus]}"?`);
-    if (!confirmed) return;
-
-    try {
-        const response = await fetch(`${API_URL}/reports/${reportId}/status`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ status: nextStatus })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showNotification('Status updated successfully', 'success');
+            showNotification('Review deleted successfully!', 'success');
             loadReports();
-            closeReportDetailsModal();
         } else {
-            showNotification(data.message || 'Error updating status', 'error');
+            throw new Error('Failed to delete review');
         }
     } catch (error) {
-        console.error('Error updating status:', error);
-        showNotification('Error updating status', 'error');
+        console.error('Error deleting review:', error);
+        showNotification('Error deleting review', 'error');
     }
 }
 
-// Format date helper
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-}
-
-// Show notification helper
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    
-    // Add to body
-    document.body.appendChild(notification);
-    
-    // Trigger animation
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }, 3000);
-}
-
-// Require authentication helper
-async function requireAuth() {
-    const user = await checkAuth();
-    if (!user) {
-        window.location.href = '/login.html';
-        return null;
+// Check if style element already exists before creating a new one
+if (!document.getElementById('reports-styles')) {
+    const style = document.createElement('style');
+    style.id = 'reports-styles';
+    style.textContent = `
+    .reviews-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        margin-top: 80px;
     }
-    return user;
+
+    .reviews-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .reviews-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+    }
+
+    .reviews-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .review-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .review-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 255, 255, 0.1);
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .review-user {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid var(--primary-color);
+    }
+
+    .user-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .user-name {
+        color: var(--primary-color);
+        margin: 0;
+    }
+
+    .user-level {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .review-rating {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .star {
+        color: #666;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .star.filled,
+    .star.selected {
+        color: #FFD700;
+    }
+
+    .review-comment {
+        color: var(--text-primary);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .review-context {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-style: italic;
+        margin-top: 0.5rem;
+    }
+
+    .review-date {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .review-actions {
+        margin-top: 1rem;
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-action {
+        padding: 0.5rem 1rem;
+        background: transparent;
+        border: 1px solid var(--primary-color);
+        color: var(--primary-color);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-action:hover {
+        background: var(--primary-color);
+        color: var(--dark-bg);
+    }
+
+    .btn-delete {
+        border-color: var(--error);
+        color: var(--error);
+    }
+
+    .btn-delete:hover {
+        background: var(--error);
+        color: white;
+    }
+
+    .review-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: 4px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .form-textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    #starRating {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 2rem;
+    }
+
+    #starRating .star {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    #starRating .star:hover {
+        transform: scale(1.2);
+    }
+
+    .no-data {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 3rem;
+        font-size: 1.1rem;
+    }
+
+    .error {
+        text-align: center;
+        color: var(--error);
+        padding: 2rem;
+    }
+
+    .loading-spinner {
+        text-align: center;
+        padding: 3rem;
+    }
+
+    .loading-spinner::after {
+        content: '⚔️';
+        display: inline-block;
+        animation: spin 1s linear infinite;
+        font-size: 2rem;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    `;
+    document.head.appendChild(style);
 }
 
-// Close modals when clicking outside
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
-    }
-}
+// Export functions to global scope
+window.openReviewModal = openReviewModal;
+window.closeReviewModal = closeReviewModal;
+window.editReview = editReview;
+window.deleteReview = deleteReview;
+window.changePage = changePage;
