@@ -3,11 +3,13 @@ const router = express.Router();
 const reportController = require('../controllers/reportController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// Protected routes - all report operations require authentication
-router.post('/', authenticateToken, reportController.createReport);
-router.get('/', authenticateToken, reportController.getReports);
-router.get('/user/:userId', authenticateToken, reportController.getUserReports);
-router.get('/:id', authenticateToken, reportController.getReport);
-router.put('/:id/status', authenticateToken, reportController.updateReportStatus);
+// Public routes (no authentication required as per requirements)
+router.post('/', reportController.createReport);                    // POST /reports - Create new report
+router.put('/:id', reportController.updateReport);                  // PUT /reports/{report_id} - Update report
+
+// Protected routes (require authentication for viewing)
+router.get('/', authenticateToken, reportController.getReports);                    // GET /reports - Get all reports
+router.get('/user/:userId', authenticateToken, reportController.getUserReports);    // GET /reports/user/{userId} - Get user's reports
+router.get('/:id', authenticateToken, reportController.getReport);                  // GET /reports/{id} - Get specific report
 
 module.exports = router;

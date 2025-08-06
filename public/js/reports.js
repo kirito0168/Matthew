@@ -1,4 +1,4 @@
-// Reports/Reviews JavaScript
+// Reports/Reviews JavaScript - Complete Fixed Version
 
 let selectedRating = 0;
 let currentPage = 1;
@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (writeButton) {
             writeButton.style.display = 'none';
         }
+    }
+    
+    // Add dynamic styles if not already added
+    if (!document.getElementById('reports-dynamic-styles')) {
+        addDynamicStyles();
     }
 });
 
@@ -94,10 +99,20 @@ function displayReviews(reviews) {
 }
 
 function updateStats(total, average) {
-    document.getElementById('totalReviews').textContent = total || 0;
+    // Update total reviews
+    const totalElement = document.getElementById('totalReviews');
+    if (totalElement) {
+        totalElement.textContent = total || 0;
+    }
+    
     // Fix the toFixed error by ensuring average is a number
     const avgRating = parseFloat(average) || 0;
-    document.getElementById('averageRating').textContent = avgRating.toFixed(1);
+    
+    // Try both possible element IDs for average rating
+    const avgElement = document.getElementById('avgRating') || document.getElementById('averageRating');
+    if (avgElement) {
+        avgElement.textContent = avgRating.toFixed(1);
+    }
 }
 
 function generateStars(rating) {
@@ -184,59 +199,136 @@ function changePage(page) {
     loadReports();
 }
 
-// Star rating setup
+// Star rating setup - FIXED VERSION
 function setupStarRating() {
-    const stars = document.querySelectorAll('#starRating .star');
-    stars.forEach((star, index) => {
+    const starContainer = document.getElementById('starRating');
+    if (!starContainer) return;
+    
+    const stars = starContainer.querySelectorAll('.star');
+    
+    stars.forEach(star => {
         star.addEventListener('click', () => {
-            selectedRating = index + 1;
+            selectedRating = parseInt(star.dataset.rating);
             updateStarDisplay(selectedRating);
+            // Show the selected rating value
+            showRatingValue(selectedRating);
         });
         
         star.addEventListener('mouseenter', () => {
-            updateStarDisplay(index + 1);
+            const hoverRating = parseInt(star.dataset.rating);
+            updateStarDisplay(hoverRating);
+            showRatingValue(hoverRating);
         });
     });
     
-    document.getElementById('starRating').addEventListener('mouseleave', () => {
+    starContainer.addEventListener('mouseleave', () => {
         updateStarDisplay(selectedRating);
+        if (selectedRating > 0) {
+            showRatingValue(selectedRating);
+        } else {
+            hideRatingValue();
+        }
     });
 }
 
 function updateStarDisplay(rating) {
     const stars = document.querySelectorAll('#starRating .star');
-    stars.forEach((star, index) => {
-        star.classList.toggle('selected', index < rating);
+    stars.forEach(star => {
+        const starRating = parseInt(star.dataset.rating);
+        if (starRating <= rating) {
+            star.classList.add('selected');
+            star.style.filter = 'grayscale(0%)';
+            star.style.opacity = '1';
+        } else {
+            star.classList.remove('selected');
+            star.style.filter = 'grayscale(100%)';
+            star.style.opacity = '0.5';
+        }
     });
 }
 
+function showRatingValue(rating) {
+    // Check if rating display exists, if not create it
+    let ratingDisplay = document.getElementById('ratingDisplay');
+    if (!ratingDisplay) {
+        ratingDisplay = document.createElement('span');
+        ratingDisplay.id = 'ratingDisplay';
+        ratingDisplay.style.marginLeft = '1rem';
+        ratingDisplay.style.color = 'var(--primary-color)';
+        ratingDisplay.style.fontSize = '1.2rem';
+        const starContainer = document.getElementById('starRating');
+        if (starContainer && starContainer.parentNode) {
+            starContainer.parentNode.insertBefore(ratingDisplay, starContainer.nextSibling);
+        }
+    }
+    
+    const ratingText = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+    ratingDisplay.textContent = `${rating}/5 - ${ratingText[rating]}`;
+}
+
+function hideRatingValue() {
+    const ratingDisplay = document.getElementById('ratingDisplay');
+    if (ratingDisplay) {
+        ratingDisplay.textContent = '';
+    }
+}
+
 // Modal functions
-function openReviewModal() {
-    document.getElementById('reviewModal').style.display = 'block';
+async function openReviewModal() {
+    // Check if user is logged in
+    const user = await checkAuth();
+    if (!user) {
+        showNotification('Please login to write a review', 'error');
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 1000);
+        return;
+    }
+
+    const modal = document.getElementById('reviewModal');
+    if (!modal) {
+        console.error('Review modal not found');
+        return;
+    }
+    
+    modal.style.display = 'block';
     editingReviewId = null;
     selectedRating = 0;
     updateStarDisplay(0);
-    document.getElementById('reviewComment').value = '';
-    document.querySelector('.modal-title').textContent = 'Write Your Review';
-    document.querySelector('.btn-submit').textContent = 'Submit Review';
+    
+    const reviewComment = document.getElementById('reviewComment');
+    if (reviewComment) {
+        reviewComment.value = '';
+    }
+    
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) {
+        modalTitle.textContent = 'Write Your Review';
+    }
+    
+    const submitButton = document.getElementById('submitButton');
+    if (submitButton) {
+        submitButton.textContent = 'Submit Review';
+    }
+    
+    hideRatingValue();
 }
 
 function closeReviewModal() {
-    document.getElementById('reviewModal').style.display = 'none';
-    document.getElementById('reviewForm').reset();
-    editingReviewId = null;
+    const modal = document.getElementById('reviewModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    const reviewForm = document.getElementById('reviewForm');
+    if (reviewForm) {
+        reviewForm.reset();
+    }
+    
     selectedRating = 0;
     updateStarDisplay(0);
-}
-
-function editReview(id, rating, comment) {
-    editingReviewId = id;
-    selectedRating = rating;
-    document.getElementById('reviewComment').value = comment;
-    updateStarDisplay(rating);
-    document.querySelector('.modal-title').textContent = 'Edit Your Review';
-    document.querySelector('.btn-submit').textContent = 'Update Review';
-    document.getElementById('reviewModal').style.display = 'block';
+    editingReviewId = null;
+    hideRatingValue();
 }
 
 async function handleReviewSubmit(e) {
@@ -247,24 +339,26 @@ async function handleReviewSubmit(e) {
         return;
     }
 
-    const comment = document.getElementById('reviewComment').value;
+    const comment = document.getElementById('reviewComment').value.trim();
     
     try {
-        const url = editingReviewId 
-            ? `${API_URL}/reviews/${editingReviewId}`
-            : `${API_URL}/reviews`;
-            
-        const method = editingReviewId ? 'PUT' : 'POST';
+        const token = localStorage.getItem('token');
+        const url = editingReviewId ? 
+            `${API_URL}/reviews/${editingReviewId}` : 
+            `${API_URL}/reviews`;
         
+        const method = editingReviewId ? 'PUT' : 'POST';
+
         const response = await fetch(url, {
             method: method,
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ 
-                rating: selectedRating, 
-                comment 
+            body: JSON.stringify({
+                rating: selectedRating,
+                comment: comment || null,
+                vulnerabilityId: null // General review
             })
         });
 
@@ -273,7 +367,7 @@ async function handleReviewSubmit(e) {
         if (response.ok) {
             showNotification(editingReviewId ? 'Review updated successfully!' : 'Review submitted successfully!', 'success');
             closeReviewModal();
-            loadReports();
+            await loadReports();
         } else {
             throw new Error(data.message || 'Failed to submit review');
         }
@@ -283,22 +377,56 @@ async function handleReviewSubmit(e) {
     }
 }
 
-async function deleteReview(id) {
+async function editReview(reviewId, rating, comment) {
+    const user = await checkAuth();
+    if (!user) {
+        showNotification('Please login to edit your review', 'error');
+        return;
+    }
+
+    editingReviewId = reviewId;
+    selectedRating = rating;
+    updateStarDisplay(rating);
+    showRatingValue(rating);
+    
+    const reviewComment = document.getElementById('reviewComment');
+    if (reviewComment) {
+        reviewComment.value = comment || '';
+    }
+    
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) {
+        modalTitle.textContent = 'Edit Your Review';
+    }
+    
+    const submitButton = document.getElementById('submitButton');
+    if (submitButton) {
+        submitButton.textContent = 'Update Review';
+    }
+    
+    const modal = document.getElementById('reviewModal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+}
+
+async function deleteReview(reviewId) {
     if (!confirm('Are you sure you want to delete this review?')) {
         return;
     }
 
     try {
-        const response = await fetch(`${API_URL}/reviews/${id}`, {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/reviews/${reviewId}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${token}`
             }
         });
 
         if (response.ok) {
             showNotification('Review deleted successfully!', 'success');
-            loadReports();
+            await loadReports();
         } else {
             throw new Error('Failed to delete review');
         }
@@ -308,235 +436,113 @@ async function deleteReview(id) {
     }
 }
 
-// Check if style element already exists before creating a new one
-if (!document.getElementById('reports-styles')) {
-    const style = document.createElement('style');
-    style.id = 'reports-styles';
-    style.textContent = `
-    .reviews-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem;
-        margin-top: 80px;
+// Notification function (if not already defined in main.js)
+function showNotification(message, type = 'info') {
+    // Check if function already exists from main.js
+    if (typeof window.showNotification === 'function' && window.showNotification !== showNotification) {
+        return window.showNotification(message, type);
     }
-
-    .reviews-header {
-        text-align: center;
-        margin-bottom: 3rem;
-    }
-
-    .reviews-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
-    }
-
-    .stat-card {
-        background: var(--card-bg);
-        padding: 1.5rem;
-        border-radius: 8px;
-        text-align: center;
-        border: 1px solid var(--border-color);
-    }
-
-    .stat-value {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: var(--primary-color);
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-        color: var(--text-secondary);
-    }
-
-    .reviews-list {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }
-
-    .review-card {
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .review-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 255, 255, 0.1);
-    }
-
-    .review-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .review-user {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .user-avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        overflow: hidden;
-        border: 2px solid var(--primary-color);
-    }
-
-    .user-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .user-name {
-        color: var(--primary-color);
-        margin: 0;
-    }
-
-    .user-level {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-    }
-
-    .review-rating {
-        display: flex;
-        gap: 0.25rem;
-    }
-
-    .star {
-        color: #666;
-        cursor: pointer;
-        transition: color 0.2s;
-    }
-
-    .star.filled,
-    .star.selected {
-        color: #FFD700;
-    }
-
-    .review-comment {
-        color: var(--text-primary);
-        line-height: 1.6;
-        margin-bottom: 1rem;
-    }
-
-    .review-context {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        font-style: italic;
-        margin-top: 0.5rem;
-    }
-
-    .review-date {
-        color: var(--text-secondary);
-        font-size: 0.85rem;
-    }
-
-    .review-actions {
-        margin-top: 1rem;
-        display: flex;
-        gap: 1rem;
-    }
-
-    .btn-action {
-        padding: 0.5rem 1rem;
-        background: transparent;
-        border: 1px solid var(--primary-color);
-        color: var(--primary-color);
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .btn-action:hover {
-        background: var(--primary-color);
-        color: var(--dark-bg);
-    }
-
-    .btn-delete {
-        border-color: var(--error);
-        color: var(--error);
-    }
-
-    .btn-delete:hover {
-        background: var(--error);
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 2rem;
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
         color: white;
-    }
-
-    .review-form {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .form-textarea {
-        width: 100%;
-        padding: 0.75rem;
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
         border-radius: 4px;
-        resize: vertical;
-        font-family: inherit;
-    }
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
 
-    .form-textarea:focus {
-        outline: none;
-        border-color: var(--primary-color);
+// Add dynamic styles
+function addDynamicStyles() {
+    const style = document.createElement('style');
+    style.id = 'reports-dynamic-styles';
+    style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
-
-    #starRating {
-        display: flex;
-        gap: 0.5rem;
-        font-size: 2rem;
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
     }
-
-    #starRating .star {
-        cursor: pointer;
-        transition: transform 0.2s;
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
-
-    #starRating .star:hover {
-        transform: scale(1.2);
-    }
-
-    .no-data {
-        text-align: center;
-        color: var(--text-secondary);
-        padding: 3rem;
-        font-size: 1.1rem;
-    }
-
-    .error {
-        text-align: center;
-        color: var(--error);
-        padding: 2rem;
-    }
-
+    
     .loading-spinner {
         text-align: center;
         padding: 3rem;
     }
-
+    
     .loading-spinner::after {
         content: '⚔️';
         display: inline-block;
         animation: spin 1s linear infinite;
         font-size: 2rem;
     }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    
+    .no-data {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 3rem;
+        font-size: 1.1rem;
+    }
+    
+    .error {
+        text-align: center;
+        color: #ff4444;
+        padding: 2rem;
+    }
+    
+    /* Inline star rating styles for modal */
+    #starRating {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 2rem;
+        align-items: center;
+    }
+    
+    #starRating .star {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+        display: inline-block;
+    }
+    
+    #starRating .star:hover {
+        transform: scale(1.2);
+    }
+    
+    #starRating .star.selected {
+        filter: grayscale(0%) !important;
+        opacity: 1 !important;
+        transform: scale(1.1);
+    }
+    
+    #ratingDisplay {
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
     `;
     document.head.appendChild(style);
