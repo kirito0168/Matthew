@@ -1,4 +1,4 @@
-// Reports/Reviews JavaScript - Complete Fixed Version
+// Reports/Reviews Page JavaScript - Complete Fixed Version
 
 let selectedRating = 0;
 let currentPage = 1;
@@ -6,31 +6,27 @@ const itemsPerPage = 10;
 let editingReviewId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Update navigation first
-    await updateNavigation();
-    
-    // Check if user is logged in but don't require auth for viewing
-    const user = await checkAuth();
+    // Check authentication
+    await checkAuth();
     
     // Load reviews
     await loadReports();
 
-    // Setup star rating if user is logged in
-    if (user) {
-        setupStarRating();
-        // Setup form handler
-        document.getElementById('reviewForm').addEventListener('submit', handleReviewSubmit);
-    } else {
-        // Hide write review button if not logged in
-        const writeButton = document.querySelector('.btn-primary');
-        if (writeButton) {
-            writeButton.style.display = 'none';
-        }
-    }
+    // Setup star rating
+    setupStarRating();
     
-    // Add dynamic styles if not already added
-    if (!document.getElementById('reports-dynamic-styles')) {
-        addDynamicStyles();
+    // Setup form handler
+    const reviewForm = document.getElementById('reviewForm');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', handleReviewSubmit);
+    }
+
+    // Setup modal close on outside click
+    window.onclick = function(event) {
+        const modal = document.getElementById('reviewModal');
+        if (event.target === modal) {
+            closeReviewModal();
+        }
     }
 });
 
@@ -43,16 +39,20 @@ async function loadReports() {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('Reviews data:', data); // Debug log
-            displayReviews(data.reviews);
-            displayPagination(data.pagination);
-            updateStats(data.pagination.total, data.averageRating);
+            displayReviews(data.reviews || []);
+            displayPagination(data.pagination || {});
+            // Safely pass averageRating, handling undefined/null cases
+            const avgRating = data.averageRating || data.average || 0;
+            const totalCount = (data.pagination && data.pagination.total) || 0;
+            updateStats(totalCount, avgRating);
         } else {
             throw new Error('Failed to load reviews');
         }
     } catch (error) {
-        console.error('Error loading reports:', error);
+        console.error('Error loading reviews:', error);
         reviewsList.innerHTML = '<p class="error">Error loading reviews. Please try again later.</p>';
+        // Set default values on error
+        updateStats(0, 0);
     }
 }
 
@@ -61,64 +61,68 @@ function displayReviews(reviews) {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (!reviews || reviews.length === 0) {
-        reviewsList.innerHTML = '<p class="no-data">No reviews yet. Be the first to write one!</p>';
+        reviewsList.innerHTML = '<p class="no-data">No reviews yet. Be the first to share your experience!</p>';
         return;
     }
 
-    reviewsList.innerHTML = reviews.map(review => `
-        <div class="review-card">
-            <div class="review-header">
-                <div class="review-user">
-                    <div class="user-avatar">
-                        <img src="${review.avatar_url || '/img/default-avatar.png'}" alt="${review.username}">
+    reviewsList.innerHTML = reviews.map(review => {
+        const isOwner = currentUser.id === review.user_id;
+        const userInitial = review.username ? review.username.charAt(0).toUpperCase() : '?';
+        
+        return `
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="review-user">
+                        <div class="user-avatar">${userInitial}</div>
+                        <div class="user-info">
+                            <h3 class="user-name">${escapeHtml(review.username || 'Anonymous')}</h3>
+                            <span class="user-level">Level ${review.user_level || 1}</span>
+                        </div>
                     </div>
-                    <div class="user-info">
-                        <h3 class="user-name">${escapeHtml(review.username)}</h3>
-                        <div class="user-level">Level ${review.level}</div>
+                    <div class="review-meta">
+                        <div class="review-date">${formatDate(review.created_at)}</div>
+                        <div class="review-rating">
+                            ${generateStars(review.rating)}
+                        </div>
                     </div>
                 </div>
-                <div class="review-rating">
-                    ${generateStars(review.rating)}
-                </div>
+                ${review.comment ? `
+                    <div class="review-content">
+                        <p class="review-comment">${escapeHtml(review.comment)}</p>
+                    </div>
+                ` : ''}
+                ${isOwner ? `
+                    <div class="review-actions">
+                        <button class="btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${escapeHtml(review.comment || '').replace(/'/g, "\\'")}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteReview(${review.id})">Delete</button>
+                    </div>
+                ` : ''}
             </div>
-            <div class="review-body">
-                <p class="review-comment">${escapeHtml(review.comment)}</p>
-                ${review.vulnerability_title ? 
-                    `<div class="review-context">Regarding: ${escapeHtml(review.vulnerability_title)}</div>` : 
-                    ''}
-                <div class="review-date">${formatDate(review.created_at)}</div>
-            </div>
-            ${currentUser.id === review.user_id ? `
-                <div class="review-actions">
-                    <button class="btn-action btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${escapeHtml(review.comment).replace(/'/g, "\\'")}')">Edit</button>
-                    <button class="btn-action btn-delete" onclick="deleteReview(${review.id})">Delete</button>
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function updateStats(total, average) {
-    // Update total reviews
-    const totalElement = document.getElementById('totalReviews');
-    if (totalElement) {
-        totalElement.textContent = total || 0;
+    const totalReviews = document.getElementById('totalReviews');
+    const averageRating = document.getElementById('averageRating');
+    
+    if (totalReviews) {
+        totalReviews.textContent = total || 0;
     }
     
-    // Fix the toFixed error by ensuring average is a number
-    const avgRating = parseFloat(average) || 0;
-    
-    // Try both possible element IDs for average rating
-    const avgElement = document.getElementById('avgRating') || document.getElementById('averageRating');
-    if (avgElement) {
-        avgElement.textContent = avgRating.toFixed(1);
+    if (averageRating) {
+        // Ensure average is a valid number before calling toFixed
+        const avgValue = (average !== null && average !== undefined && !isNaN(average)) 
+            ? parseFloat(average).toFixed(1) 
+            : '0.0';
+        averageRating.textContent = avgValue;
     }
 }
 
 function generateStars(rating) {
     let stars = '';
     for (let i = 1; i <= 5; i++) {
-        stars += `<span class="star ${i <= rating ? 'filled' : ''}">⭐</span>`;
+        stars += `<span class="star ${i <= rating ? '' : 'empty'}">⭐</span>`;
     }
     return stars;
 }
@@ -197,9 +201,10 @@ function displayPagination(pagination) {
 function changePage(page) {
     currentPage = page;
     loadReports();
+    window.scrollTo(0, 0);
 }
 
-// Star rating setup - FIXED VERSION
+// Star rating setup
 function setupStarRating() {
     const starContainer = document.getElementById('starRating');
     if (!starContainer) return;
@@ -210,60 +215,38 @@ function setupStarRating() {
         star.addEventListener('click', () => {
             selectedRating = parseInt(star.dataset.rating);
             updateStarDisplay(selectedRating);
-            // Show the selected rating value
             showRatingValue(selectedRating);
         });
         
         star.addEventListener('mouseenter', () => {
-            const hoverRating = parseInt(star.dataset.rating);
-            updateStarDisplay(hoverRating);
-            showRatingValue(hoverRating);
+            const rating = parseInt(star.dataset.rating);
+            updateStarDisplay(rating, true);
         });
     });
     
     starContainer.addEventListener('mouseleave', () => {
         updateStarDisplay(selectedRating);
-        if (selectedRating > 0) {
-            showRatingValue(selectedRating);
-        } else {
-            hideRatingValue();
-        }
     });
 }
 
-function updateStarDisplay(rating) {
+function updateStarDisplay(rating, isHover = false) {
     const stars = document.querySelectorAll('#starRating .star');
     stars.forEach(star => {
         const starRating = parseInt(star.dataset.rating);
         if (starRating <= rating) {
-            star.classList.add('selected');
-            star.style.filter = 'grayscale(0%)';
-            star.style.opacity = '1';
+            star.classList.add('filled');
         } else {
-            star.classList.remove('selected');
-            star.style.filter = 'grayscale(100%)';
-            star.style.opacity = '0.5';
+            star.classList.remove('filled');
         }
     });
 }
 
 function showRatingValue(rating) {
-    // Check if rating display exists, if not create it
-    let ratingDisplay = document.getElementById('ratingDisplay');
-    if (!ratingDisplay) {
-        ratingDisplay = document.createElement('span');
-        ratingDisplay.id = 'ratingDisplay';
-        ratingDisplay.style.marginLeft = '1rem';
-        ratingDisplay.style.color = 'var(--primary-color)';
-        ratingDisplay.style.fontSize = '1.2rem';
-        const starContainer = document.getElementById('starRating');
-        if (starContainer && starContainer.parentNode) {
-            starContainer.parentNode.insertBefore(ratingDisplay, starContainer.nextSibling);
-        }
+    const ratingDisplay = document.getElementById('ratingDisplay');
+    if (ratingDisplay) {
+        const ratingText = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+        ratingDisplay.textContent = `${rating}/5 - ${ratingText[rating]}`;
     }
-    
-    const ratingText = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
-    ratingDisplay.textContent = `${rating}/5 - ${ratingText[rating]}`;
 }
 
 function hideRatingValue() {
@@ -276,12 +259,12 @@ function hideRatingValue() {
 // Modal functions
 async function openReviewModal() {
     // Check if user is logged in
-    const user = await checkAuth();
-    if (!user) {
+    const token = localStorage.getItem('token');
+    if (!token) {
         showNotification('Please login to write a review', 'error');
         setTimeout(() => {
             window.location.href = '/login.html';
-        }, 1000);
+        }, 1500);
         return;
     }
 
@@ -295,6 +278,7 @@ async function openReviewModal() {
     editingReviewId = null;
     selectedRating = 0;
     updateStarDisplay(0);
+    hideRatingValue();
     
     const reviewComment = document.getElementById('reviewComment');
     if (reviewComment) {
@@ -310,8 +294,6 @@ async function openReviewModal() {
     if (submitButton) {
         submitButton.textContent = 'Submit Review';
     }
-    
-    hideRatingValue();
 }
 
 function closeReviewModal() {
@@ -343,6 +325,11 @@ async function handleReviewSubmit(e) {
     
     try {
         const token = localStorage.getItem('token');
+        if (!token) {
+            showNotification('Please login to submit a review', 'error');
+            return;
+        }
+
         const url = editingReviewId ? 
             `${API_URL}/reviews/${editingReviewId}` : 
             `${API_URL}/reviews`;
@@ -365,7 +352,10 @@ async function handleReviewSubmit(e) {
         const data = await response.json();
 
         if (response.ok) {
-            showNotification(editingReviewId ? 'Review updated successfully!' : 'Review submitted successfully!', 'success');
+            showNotification(
+                editingReviewId ? 'Review updated successfully!' : 'Review submitted successfully!', 
+                'success'
+            );
             closeReviewModal();
             await loadReports();
         } else {
@@ -378,8 +368,8 @@ async function handleReviewSubmit(e) {
 }
 
 async function editReview(reviewId, rating, comment) {
-    const user = await checkAuth();
-    if (!user) {
+    const token = localStorage.getItem('token');
+    if (!token) {
         showNotification('Please login to edit your review', 'error');
         return;
     }
@@ -417,6 +407,11 @@ async function deleteReview(reviewId) {
 
     try {
         const token = localStorage.getItem('token');
+        if (!token) {
+            showNotification('Please login to delete your review', 'error');
+            return;
+        }
+
         const response = await fetch(`${API_URL}/reviews/${reviewId}`, {
             method: 'DELETE',
             headers: {
@@ -428,127 +423,85 @@ async function deleteReview(reviewId) {
             showNotification('Review deleted successfully!', 'success');
             await loadReports();
         } else {
-            throw new Error('Failed to delete review');
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to delete review');
         }
     } catch (error) {
         console.error('Error deleting review:', error);
-        showNotification('Error deleting review', 'error');
+        showNotification(error.message || 'Error deleting review', 'error');
     }
 }
 
-// Notification function (if not already defined in main.js)
+// Notification function
 function showNotification(message, type = 'info') {
-    // Check if function already exists from main.js
-    if (typeof window.showNotification === 'function' && window.showNotification !== showNotification) {
-        return window.showNotification(message, type);
-    }
+    // Remove any existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(n => n.remove());
     
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `notification notification-${type} show`;
     notification.textContent = message;
+    
+    // Add inline styles for notification
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
         padding: 1rem 2rem;
-        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        background: ${type === 'success' ? 'rgba(76, 175, 80, 0.9)' : type === 'error' ? 'rgba(244, 67, 54, 0.9)' : 'rgba(0, 212, 255, 0.9)'};
         color: white;
-        border-radius: 4px;
+        border-radius: 8px;
         z-index: 10000;
         animation: slideIn 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     `;
     
     document.body.appendChild(notification);
     
     setTimeout(() => {
+        notification.classList.remove('show');
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Add dynamic styles
-function addDynamicStyles() {
+// Add dynamic styles for animations
+function addNotificationStyles() {
+    if (document.getElementById('notification-styles')) return;
+    
     const style = document.createElement('style');
-    style.id = 'reports-dynamic-styles';
+    style.id = 'notification-styles';
     style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .loading-spinner {
-        text-align: center;
-        padding: 3rem;
-    }
-    
-    .loading-spinner::after {
-        content: '⚔️';
-        display: inline-block;
-        animation: spin 1s linear infinite;
-        font-size: 2rem;
-    }
-    
-    .no-data {
-        text-align: center;
-        color: var(--text-secondary);
-        padding: 3rem;
-        font-size: 1.1rem;
-    }
-    
-    .error {
-        text-align: center;
-        color: #ff4444;
-        padding: 2rem;
-    }
-    
-    /* Inline star rating styles for modal */
-    #starRating {
-        display: flex;
-        gap: 0.5rem;
-        font-size: 2rem;
-        align-items: center;
-    }
-    
-    #starRating .star {
-        cursor: pointer;
-        transition: all 0.3s ease;
-        user-select: none;
-        display: inline-block;
-    }
-    
-    #starRating .star:hover {
-        transform: scale(1.2);
-    }
-    
-    #starRating .star.selected {
-        filter: grayscale(0%) !important;
-        opacity: 1 !important;
-        transform: scale(1.1);
-    }
-    
-    #ratingDisplay {
-        animation: fadeIn 0.3s ease;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
+        @keyframes slideIn {
+            from { 
+                transform: translateX(100%); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+        }
+        
+        @keyframes slideOut {
+            from { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+            to { 
+                transform: translateX(100%); 
+                opacity: 0; 
+            }
+        }
     `;
     document.head.appendChild(style);
 }
 
-// Export functions to global scope
+// Initialize notification styles
+addNotificationStyles();
+
+// Export functions to global scope for onclick handlers
 window.openReviewModal = openReviewModal;
 window.closeReviewModal = closeReviewModal;
 window.editReview = editReview;

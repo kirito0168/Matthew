@@ -7,6 +7,493 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
+    <style>
+        /* Reports/Reviews Page Specific Styles */
+        .reviews-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            min-height: calc(100vh - 100px);
+        }
+
+        .reviews-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 20px var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-title.glitch {
+            position: relative;
+            animation: glitch 2s linear infinite;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .reviews-stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.5s ease-out 0.2s backwards;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .reviews-list {
+            animation: fadeInUp 0.5s ease-out 0.4s backwards;
+            min-height: 400px;
+        }
+
+        .review-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            animation: fadeInUp 0.5s ease-out;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .review-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .review-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: 2px solid var(--primary-color);
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .user-level {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .review-meta {
+            text-align: right;
+        }
+
+        .review-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .review-rating {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .review-rating .star {
+            color: #ffd700;
+            font-size: 1.2rem;
+            filter: grayscale(0%);
+        }
+
+        .review-rating .star.empty {
+            filter: grayscale(100%);
+            opacity: 0.3;
+        }
+
+        .review-content {
+            margin: 1rem 0;
+        }
+
+        .review-comment {
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .review-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-edit,
+        .btn-delete {
+            padding: 0.4rem 1rem;
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-edit:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+        }
+
+        .btn-delete {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-delete:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            margin: 5% auto;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-close {
+            color: var(--text-secondary);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--primary-color);
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        .review-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 2rem;
+            align-items: center;
+        }
+
+        .star-rating .star {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+
+        .star-rating .star:hover {
+            transform: scale(1.2);
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+
+        .star-rating .star.filled {
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+
+        #ratingDisplay {
+            margin-left: 1rem;
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .form-textarea {
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 100px;
+            transition: all 0.3s ease;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .form-textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
+        .btn-submit,
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-submit {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            border: none;
+        }
+
+        .btn-submit:hover {
+            background: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Pagination */
+        .pagination {
+            margin-top: 2rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .page-btn {
+            padding: 0.5rem 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            border-color: var(--primary-color);
+        }
+
+        .page-current {
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* Loading and Empty States */
+        .loading-spinner {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading-spinner::after {
+            content: '⚔️';
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            font-size: 2rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 3rem;
+            font-size: 1.1rem;
+        }
+
+        .error {
+            text-align: center;
+            color: var(--danger);
+            padding: 2rem;
+        }
+
+        /* Glitch Effect */
+        @keyframes glitch {
+            0%, 100% {
+                text-shadow: 
+                    0 0 20px var(--primary-color),
+                    2px 2px 2px rgba(0, 212, 255, 0.8);
+            }
+            25% {
+                text-shadow: 
+                    0 0 20px var(--primary-color),
+                    -2px -2px 2px rgba(255, 0, 128, 0.8);
+            }
+            50% {
+                text-shadow: 
+                    0 0 20px var(--primary-color),
+                    2px -2px 2px rgba(0, 255, 128, 0.8);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .reviews-header {
+                margin-bottom: 2rem;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .reviews-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .review-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .review-meta {
+                text-align: left;
+            }
+
+            .review-actions {
+                justify-content: flex-start;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="sao-background">
@@ -18,14 +505,10 @@
         <div class="nav-container">
             <div class="nav-logo">
                 <span class="logo-text">SAO Bug Bounty</span>
-                <div class="logo-subtitle">Player Testimonials</div>
+                <div class="logo-subtitle">Player Reviews</div>
             </div>
             <ul class="nav-menu">
                 <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/dashboard.html" class="nav-link">Dashboard</a></li>
-                <li><a href="/vulnerabilities.html" class="nav-link">Vulnerabilities</a></li>
-                <li><a href="/quests.html" class="nav-link">Quests</a></li>
-                <li><a href="/reports.html" class="nav-link active">Reviews</a></li>
                 <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
                 <li><a href="/contact.html" class="nav-link">Contact</a></li>
                 <li class="nav-auth"></li>
@@ -62,7 +545,7 @@
     <div class="modal" id="reviewModal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeReviewModal()">&times;</span>
-            <h2 class="modal-title">Write Your Review</h2>
+            <h2 class="modal-title" id="modalTitle">Write Your Review</h2>
             <form id="reviewForm" class="review-form">
                 <div class="form-group">
                     <label class="form-label">Rating</label>
@@ -72,14 +555,18 @@
                         <span class="star" data-rating="3">⭐</span>
                         <span class="star" data-rating="4">⭐</span>
                         <span class="star" data-rating="5">⭐</span>
+                        <span id="ratingDisplay"></span>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Your Review</label>
-                    <textarea id="reviewComment" class="form-textarea" rows="5" required
+                    <label class="form-label">Your Review (Optional)</label>
+                    <textarea id="reviewComment" class="form-textarea" rows="5"
                               placeholder="Share your experience with the SAO Bug Bounty System..."></textarea>
                 </div>
-                <button type="submit" class="btn-submit">Submit Review</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit" id="submitButton">Submit Review</button>
+                    <button type="button" class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
