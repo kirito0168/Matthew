@@ -3,571 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAO Bug Bounty - Player Reviews</title>
+    <title>Reports - SAO Bug Bounty System</title>
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <style>
-        /* Reports/Reviews Page Specific Styles */
-        .reviews-container {
-            max-width: 1000px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-            min-height: calc(100vh - 100px);
-        }
-
-        .reviews-header {
-            text-align: center;
-            margin-bottom: 3rem;
-            animation: fadeInUp 0.5s ease-out;
-        }
-
-        .page-title {
-            font-size: 2.5rem;
-            color: var(--primary-color);
-            text-shadow: 0 0 20px var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-
-        .page-title.glitch {
-            position: relative;
-            animation: glitch 2s linear infinite;
-        }
-
-        .page-subtitle {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .reviews-stats {
-            display: flex;
-            gap: 2rem;
-            margin-bottom: 2rem;
-            animation: fadeInUp 0.5s ease-out 0.2s backwards;
-        }
-
-        .stat-card {
-            flex: 1;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            border-color: var(--primary-color);
-            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.2);
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            text-shadow: 0 0 10px var(--primary-color);
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .reviews-list {
-            animation: fadeInUp 0.5s ease-out 0.4s backwards;
-            min-height: 400px;
-        }
-
-        .review-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            animation: fadeInUp 0.5s ease-out;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .review-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.2);
-            border-color: var(--primary-color);
-        }
-
-        .review-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .review-user {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 1.2rem;
-            border: 2px solid var(--primary-color);
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
-            color: var(--primary-color);
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .user-level {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .review-meta {
-            text-align: right;
-        }
-
-        .review-date {
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-        }
-
-        .review-rating {
-            display: flex;
-            gap: 0.25rem;
-            margin-top: 0.5rem;
-        }
-
-        .review-rating .star {
-            color: #ffd700;
-            font-size: 1.2rem;
-            filter: grayscale(0%);
-        }
-
-        .review-rating .star.empty {
-            filter: grayscale(100%);
-            opacity: 0.3;
-        }
-
-        .review-content {
-            margin: 1rem 0;
-        }
-
-        .review-comment {
-            color: var(--text-primary);
-            line-height: 1.6;
-            margin: 0;
-        }
-
-        .review-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-        }
-
-        .btn-edit,
-        .btn-delete {
-            padding: 0.4rem 1rem;
-            background: transparent;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        .btn-edit:hover {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-        }
-
-        .btn-delete {
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .btn-delete:hover {
-            background: var(--danger);
-            color: white;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: var(--card-bg);
-            margin: 5% auto;
-            padding: 2rem;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .modal-close {
-            color: var(--text-secondary);
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-
-        .modal-close:hover {
-            color: var(--primary-color);
-        }
-
-        .modal-title {
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            font-size: 1.8rem;
-        }
-
-        .review-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .form-label {
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .star-rating {
-            display: flex;
-            gap: 0.5rem;
-            font-size: 2rem;
-            align-items: center;
-        }
-
-        .star-rating .star {
-            cursor: pointer;
-            transition: all 0.3s ease;
-            user-select: none;
-            filter: grayscale(100%);
-            opacity: 0.5;
-        }
-
-        .star-rating .star:hover {
-            transform: scale(1.2);
-            filter: grayscale(0%);
-            opacity: 1;
-        }
-
-        .star-rating .star.filled {
-            filter: grayscale(0%);
-            opacity: 1;
-        }
-
-        #ratingDisplay {
-            margin-left: 1rem;
-            color: var(--text-secondary);
-            font-size: 1rem;
-        }
-
-        .form-textarea {
-            padding: 0.75rem;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            border-radius: 4px;
-            resize: vertical;
-            min-height: 100px;
-            transition: all 0.3s ease;
-        }
-
-        .form-textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-        }
-
-        .form-textarea::placeholder {
-            color: var(--text-secondary);
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1rem;
-        }
-
-        .btn-submit,
-        .btn-secondary {
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .btn-submit {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-            border: none;
-        }
-
-        .btn-submit:hover {
-            background: var(--accent-color);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid var(--text-secondary);
-            color: var(--text-secondary);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        /* Pagination */
-        .pagination {
-            margin-top: 2rem;
-        }
-
-        .pagination-controls {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .page-btn {
-            padding: 0.5rem 1rem;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .page-btn:hover {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-            border-color: var(--primary-color);
-        }
-
-        .page-current {
-            padding: 0.5rem 1rem;
-            background: var(--primary-color);
-            color: var(--dark-bg);
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        /* Loading and Empty States */
-        .loading-spinner {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .loading-spinner::after {
-            content: '⚔️';
-            display: inline-block;
-            animation: spin 1s linear infinite;
-            font-size: 2rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .no-data {
-            text-align: center;
-            color: var(--text-secondary);
-            padding: 3rem;
-            font-size: 1.1rem;
-        }
-
-        .error {
-            text-align: center;
-            color: var(--danger);
-            padding: 2rem;
-        }
-
-        /* Glitch Effect */
-        @keyframes glitch {
-            0%, 100% {
-                text-shadow: 
-                    0 0 20px var(--primary-color),
-                    2px 2px 2px rgba(0, 212, 255, 0.8);
-            }
-            25% {
-                text-shadow: 
-                    0 0 20px var(--primary-color),
-                    -2px -2px 2px rgba(255, 0, 128, 0.8);
-            }
-            50% {
-                text-shadow: 
-                    0 0 20px var(--primary-color),
-                    2px -2px 2px rgba(0, 255, 128, 0.8);
-            }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .reviews-header {
-                margin-bottom: 2rem;
-            }
-
-            .page-title {
-                font-size: 2rem;
-            }
-
-            .reviews-stats {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .review-header {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .review-meta {
-                text-align: left;
-            }
-
-            .review-actions {
-                justify-content: flex-start;
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 10% auto;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/reports.css">
 </head>
 <body>
-    <div class="sao-background">
-        <div class="floating-particles"></div>
-        <div class="digital-grid"></div>
-    </div>
-
-    <nav class="main-nav">
+    <nav class="navbar">
         <div class="nav-container">
             <div class="nav-logo">
-                <span class="logo-text">SAO Bug Bounty</span>
-                <div class="logo-subtitle">Player Reviews</div>
+                <a href="/">SAO Bug Bounty</a>
             </div>
-            <ul class="nav-menu">
-                <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
-                <li><a href="/contact.html" class="nav-link">Contact</a></li>
-                <li class="nav-auth"></li>
-            </ul>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/vulnerabilities.html" class="nav-link">Vulnerabilities</a>
+                <a href="/reports.html" class="nav-link active">Reports</a>
+                <a href="/rankings.html" class="nav-link">Rankings</a>
+                <a href="/quest-game.html" class="nav-link">Quests</a>
+            </div>
+            <div class="nav-auth">
+                <a href="/login.html" class="nav-link">Login</a>
+                <a href="/register.html" class="nav-link btn-primary">Register</a>
+            </div>
         </div>
     </nav>
 
-    <main class="reviews-container">
-        <div class="reviews-header">
-            <h1 class="page-title glitch" data-text="PLAYER REVIEWS">PLAYER REVIEWS</h1>
-            <p class="page-subtitle">What our bug hunters are saying</p>
-            <button class="btn-primary" onclick="openReviewModal()">Write Review</button>
+    <main class="reports-container">
+        <div class="reports-header">
+            <h1 class="page-title">Vulnerability Reports</h1>
+            <button class="btn-primary" onclick="openCreateReportModal()">Create New Report</button>
         </div>
 
-        <div class="reviews-stats">
+        <div class="reports-filters">
+            <select id="statusFilter" class="filter-select" onchange="loadReports()">
+                <option value="">All Status</option>
+                <option value="0">Open</option>
+                <option value="1">Closed</option>
+            </select>
+            <input type="text" id="searchFilter" class="filter-input" placeholder="Search by vulnerability ID or title..." onkeyup="searchReports()">
+        </div>
+
+        <div class="reports-stats">
             <div class="stat-card">
-                <div class="stat-value" id="totalReviews">0</div>
-                <div class="stat-label">Total Reviews</div>
+                <div class="stat-value" id="totalReports">0</div>
+                <div class="stat-label">Total Reports</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="averageRating">0.0</div>
-                <div class="stat-label">Average Rating</div>
+                <div class="stat-value" id="openReports">0</div>
+                <div class="stat-label">Open Reports</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="closedReports">0</div>
+                <div class="stat-label">Closed Reports</div>
             </div>
         </div>
 
-        <div class="reviews-list" id="reviewsList">
+        <div class="reports-list" id="reportsList">
             <div class="loading-spinner"></div>
         </div>
 
         <div class="pagination" id="pagination"></div>
     </main>
 
-    <!-- Review Modal -->
-    <div class="modal" id="reviewModal">
+    <!-- Create Report Modal -->
+    <div class="modal" id="createReportModal">
         <div class="modal-content">
-            <span class="modal-close" onclick="closeReviewModal()">&times;</span>
-            <h2 class="modal-title" id="modalTitle">Write Your Review</h2>
-            <form id="reviewForm" class="review-form">
+            <span class="modal-close" onclick="closeCreateReportModal()">&times;</span>
+            <h2 class="modal-title">Create New Report</h2>
+            <form id="createReportForm" class="report-form">
                 <div class="form-group">
-                    <label class="form-label">Rating</label>
-                    <div class="star-rating" id="starRating">
-                        <span class="star" data-rating="1">⭐</span>
-                        <span class="star" data-rating="2">⭐</span>
-                        <span class="star" data-rating="3">⭐</span>
-                        <span class="star" data-rating="4">⭐</span>
-                        <span class="star" data-rating="5">⭐</span>
-                        <span id="ratingDisplay"></span>
+                    <label class="form-label">Select Vulnerability</label>
+                    <select id="vulnerabilitySelect" class="form-select" required onchange="updateVulnerabilityDetails()">
+                        <option value="">-- Select a vulnerability to report --</option>
+                    </select>
+                </div>
+                
+                <div id="vulnerabilityPreview" class="vulnerability-preview" style="display: none;">
+                    <h4>Vulnerability Details</h4>
+                    <div class="preview-content">
+                        <p><strong>ID:</strong> <span id="previewId"></span></p>
+                        <p><strong>Title:</strong> <span id="previewTitle"></span></p>
+                        <p><strong>Severity:</strong> <span id="previewSeverity"></span></p>
+                        <p><strong>Status:</strong> <span id="previewStatus"></span></p>
+                        <p><strong>EXP Reward:</strong> <span id="previewExp"></span></p>
+                        <p><strong>Description:</strong> <span id="previewDescription"></span></p>
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label class="form-label">Your Review (Optional)</label>
-                    <textarea id="reviewComment" class="form-textarea" rows="5"
-                              placeholder="Share your experience with the SAO Bug Bounty System..."></textarea>
+                    <label class="form-label">Report Summary</label>
+                    <textarea id="reportSummary" class="form-textarea" rows="8" required
+                              placeholder="Write a detailed report about this vulnerability...
+                              
+• How to reproduce the vulnerability
+• Potential impact and risk assessment
+• Proof of concept (if applicable)
+• Suggested fix or mitigation
+• Any additional notes or observations"></textarea>
                 </div>
+                
                 <div class="form-actions">
-                    <button type="submit" class="btn-submit" id="submitButton">Submit Review</button>
-                    <button type="button" class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
+                    <button type="submit" class="btn-submit">Submit Report</button>
+                    <button type="button" class="btn-secondary" onclick="closeCreateReportModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Report Details Modal -->
+    <div class="modal" id="reportDetailsModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeReportDetailsModal()">&times;</span>
+            <h2 class="modal-title">Report Details</h2>
+            <div class="report-details" id="reportDetails">
+                <div class="loading-spinner"></div>
+            </div>
         </div>
     </div>
 
