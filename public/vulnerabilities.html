@@ -7,6 +7,354 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
+    <style>
+        /* Vulnerabilities Page Specific Styles */
+        .vulnerabilities-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            min-height: calc(100vh - 100px);
+            position: relative;
+            z-index: 10;
+        }
+
+        .vulnerabilities-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-shadow: 0 0 30px var(--primary-color);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .filters-section {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--primary-color);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .filter-select option {
+            background: #0a0e1a;
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+
+        .filter-select option:hover,
+        .filter-select option:focus {
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .vulnerabilities-grid {
+            display: grid;
+            gap: 1.5rem;
+            animation: fadeInUp 0.5s ease-out 0.2s backwards;
+        }
+
+        .vuln-card {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .vuln-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .vuln-header {
+            margin-bottom: 1rem;
+        }
+
+        .vuln-title {
+            color: var(--primary-color);
+            font-size: 1.3rem;
+            margin: 0;
+        }
+
+        .vuln-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .vuln-severity,
+        .vuln-status,
+        .vuln-exp {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .severity-low { 
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50; 
+        }
+        
+        .severity-medium { 
+            background: rgba(255, 152, 0, 0.2);
+            color: #FF9800; 
+        }
+        
+        .severity-high { 
+            background: rgba(244, 67, 54, 0.2);
+            color: #F44336; 
+        }
+        
+        .severity-critical { 
+            background: rgba(156, 39, 176, 0.2);
+            color: #9C27B0; 
+        }
+
+        .status-open {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--primary-color);
+        }
+
+        .status-in_progress {
+            background: rgba(255, 152, 0, 0.2);
+            color: #FF9800;
+        }
+
+        .status-resolved {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .status-closed {
+            background: rgba(128, 128, 128, 0.2);
+            color: #808080;
+        }
+
+        .vuln-exp {
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+        }
+
+        .vuln-body {
+            margin-bottom: 1rem;
+        }
+
+        .vuln-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .vuln-info {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .vuln-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            transform: translateY(-2px);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h3 {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Loading State */
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 212, 255, 0.2);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 3rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--dark-bg);
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            color: var(--text-primary);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .form-select option {
+            background: #0a0e1a;
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+
+        .form-select option:hover,
+        .form-select option:focus,
+        .form-select option:checked {
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .form-textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+    </style>
 </head>
 <body>
     <div class="sao-background">
@@ -44,46 +392,48 @@
                 <option value="critical">Critical</option>
             </select>
             <select id="statusFilter" class="filter-select" onchange="loadVulnerabilities()">
-                <option value="">All Status</option>
+                <option value="">All Statuses</option>
                 <option value="open">Open</option>
                 <option value="in_progress">In Progress</option>
                 <option value="resolved">Resolved</option>
                 <option value="closed">Closed</option>
             </select>
+            <select id="sortFilter" class="filter-select" onchange="loadVulnerabilities()">
+                <option value="date_desc">Newest First</option>
+                <option value="date_asc">Oldest First</option>
+                <option value="exp_desc">Highest EXP</option>
+                <option value="exp_asc">Lowest EXP</option>
+            </select>
         </div>
 
-        <div class="vulnerabilities-tabs">
-            <button class="tab-btn active" onclick="switchVulnTab('all')">All Vulnerabilities</button>
-            <button class="tab-btn" onclick="switchVulnTab('my-reports')">My Reports</button>
-            <button class="tab-btn" onclick="switchVulnTab('my-resolved')">My Resolutions</button>
-        </div>
-
-        <div class="vulnerabilities-list" id="vulnerabilitiesList">
+        <div class="vulnerabilities-grid" id="vulnerabilitiesGrid">
             <div class="loading-spinner"></div>
         </div>
-
-        <div class="pagination" id="pagination"></div>
     </main>
 
-    <!-- Report Bug Modal -->
+    <!-- Report Modal -->
     <div class="modal" id="reportModal">
         <div class="modal-content">
-            <span class="modal-close" onclick="closeReportModal()">&times;</span>
-            <h2 class="modal-title">Report New Vulnerability</h2>
-            <form id="reportForm" class="report-form">
+            <div class="modal-header">
+                <h2 class="modal-title">Report New Vulnerability</h2>
+                <button class="close-btn" onclick="closeReportModal()">&times;</button>
+            </div>
+            <form id="reportForm" onsubmit="submitReport(event)">
                 <div class="form-group">
-                    <label class="form-label">Title</label>
-                    <input type="text" id="bugTitle" class="form-input" required 
-                           placeholder="Brief description of the vulnerability">
+                    <label class="form-label" for="vulnTitle">Title</label>
+                    <input type="text" id="vulnTitle" class="form-input" required 
+                           placeholder="Enter vulnerability title">
                 </div>
+                
                 <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea id="bugDescription" class="form-input" rows="5" required
-                              placeholder="Detailed description of the vulnerability"></textarea>
+                    <label class="form-label" for="vulnDescription">Description</label>
+                    <textarea id="vulnDescription" class="form-textarea" required 
+                              placeholder="Describe the vulnerability in detail"></textarea>
                 </div>
+                
                 <div class="form-group">
-                    <label class="form-label">Severity</label>
-                    <select id="bugSeverity" class="form-input" required>
+                    <label class="form-label" for="vulnSeverity">Severity</label>
+                    <select id="vulnSeverity" class="form-select" required>
                         <option value="">Select Severity</option>
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -91,26 +441,37 @@
                         <option value="critical">Critical</option>
                     </select>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Submit Report</button>
-                    <button type="button" class="btn-secondary" onclick="closeReportModal()">Cancel</button>
+                
+                <div class="form-group">
+                    <label class="form-label" for="vulnCategory">Category</label>
+                    <select id="vulnCategory" class="form-select" required>
+                        <option value="">Select Category</option>
+                        <option value="xss">Cross-Site Scripting (XSS)</option>
+                        <option value="sqli">SQL Injection</option>
+                        <option value="auth">Authentication Bypass</option>
+                        <option value="idor">IDOR</option>
+                        <option value="csrf">CSRF</option>
+                        <option value="rce">Remote Code Execution</option>
+                        <option value="other">Other</option>
+                    </select>
                 </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="vulnSteps">Steps to Reproduce</label>
+                    <textarea id="vulnSteps" class="form-textarea" required 
+                              placeholder="1. Step one&#10;2. Step two&#10;3. Step three"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="vulnImpact">Impact</label>
+                    <textarea id="vulnImpact" class="form-textarea" required 
+                              placeholder="Describe the potential impact of this vulnerability"></textarea>
+                </div>
+                
+                <button type="submit" class="btn-primary">Submit Report</button>
             </form>
         </div>
     </div>
-
-    <!-- Vulnerability Details Modal -->
-    <div class="modal" id="detailsModal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeDetailsModal()">&times;</span>
-            <h2 class="modal-title" id="detailsTitle">Vulnerability Details</h2>
-            <div class="vulnerability-details" id="vulnerabilityDetails">
-                <div class="loading-spinner"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="particle-system"></div>
 
     <script src="js/main.js"></script>
     <script src="js/vulnerabilities.js"></script>
