@@ -1,250 +1,273 @@
-// Reports Page JavaScript - Complete Version with Vulnerability Selection
-// This file handles reports functionality with vulnerability selection
+// Vulnerability Reports Page JavaScript
+// This file handles all functionality for the reports page
 
-let selectedRating = 0;
+// Global variables
+let currentTab = 'all';
 let currentPage = 1;
 const itemsPerPage = 10;
-let editingReviewId = null;
-let allReports = [];
-let availableVulnerabilities = [];
+let allVulnerabilities = [];
 let selectedVulnerability = null;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Check authentication
-    await checkAuth();
-    
-    // Load initial data
-    await loadPageData();
+// Ensure API_URL is defined
+if (typeof API_URL === 'undefined') {
+    window.API_URL = '/api';
+}
 
-    // Setup event listeners
-    setupEventListeners();
+// Initialize page
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Initializing reports page...');
     
-    // Setup star rating for reviews page (backward compatibility)
-    setupStarRating();
+    try {
+        // Update navigation if function exists
+        if (typeof updateNavigation === 'function') {
+            await updateNavigation();
+        }
+
+        // Check authentication
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!token || !user.id) {
+            console.log('No authentication found, redirecting to login...');
+            window.location.href = '/login.html';
+            return;
+        }
+
+        console.log('User authenticated:', user.username);
+
+        // Load initial data
+        await loadVulnerabilities();
+        await loadReports();
+        await loadStats();
+
+        // Setup event handlers
+        setupEventHandlers();
+        
+    } catch (error) {
+        console.error('Error initializing reports page:', error);
+        showNotification('Error initializing page. Please refresh.', 'error');
+    }
 });
 
-function setupEventListeners() {
-    // Report form handler
-    const createReportForm = document.getElementById('createReportForm');
-    if (createReportForm) {
-        createReportForm.addEventListener('submit', handleCreateReport);
-    }
-    
-    // Review form handler (backward compatibility)
-    const reviewForm = document.getElementById('reviewForm');
-    if (reviewForm) {
-        reviewForm.addEventListener('submit', handleReviewSubmit);
+// Setup all event handlers
+function setupEventHandlers() {
+    // Form submission handler
+    const reportForm = document.getElementById('reportForm');
+    if (reportForm) {
+        reportForm.addEventListener('submit', handleReportSubmit);
     }
 
-    // Setup modal close on outside click
+    // Modal close on outside click
     window.onclick = function(event) {
-        const reviewModal = document.getElementById('reviewModal');
-        const createModal = document.getElementById('createReportModal');
-        const detailsModal = document.getElementById('reportDetailsModal');
-        
-        if (event.target === reviewModal) {
-            closeReviewModal();
+        const modal = document.getElementById('reportModal');
+        if (event.target === modal) {
+            closeReportModal();
         }
-        if (event.target === createModal) {
-            closeCreateReportModal();
-        }
-        if (event.target === detailsModal) {
-            closeReportDetailsModal();
-        }
+    };
+
+    // Vulnerability select change handler
+    const vulnSelect = document.getElementById('vulnerabilitySelect');
+    if (vulnSelect) {
+        vulnSelect.addEventListener('change', updateVulnerabilityInfo);
     }
 }
 
-async function loadPageData() {
-    // Check which page we're on and load appropriate data
-    const reportsList = document.getElementById('reportsList');
-    const reviewsList = document.getElementById('reviewsList');
+// Load vulnerabilities for dropdown
+async function loadVulnerabilities() {
+    console.log('Loading vulnerabilities...');
     
-    if (reportsList) {
-        // We're on the reports page
-        await loadReports();
-        await loadAvailableVulnerabilities();
-    } else if (reviewsList) {
-        // We're on the reviews page
-        await loadReviews();
-    }
-}
-
-// ===================== VULNERABILITY LOADING =====================
-
-async function loadAvailableVulnerabilities() {
     try {
-        // Load all open vulnerabilities that can be reported on
-        const response = await fetch(`${API_URL}/vulnerabilities?status=open&limit=100`, {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/vulnerabilities?limit=100`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
 
         if (response.ok) {
             const data = await response.json();
-            availableVulnerabilities = data.vulnerabilities || [];
-            populateVulnerabilitySelect();
+            allVulnerabilities = data.vulnerabilities || [];
+            console.log(`Loaded ${allVulnerabilities.length} vulnerabilities`);
+            populateVulnerabilityDropdown();
+        } else {
+            console.error('Failed to load vulnerabilities:', response.status);
+            allVulnerabilities = [];
         }
     } catch (error) {
         console.error('Error loading vulnerabilities:', error);
+        allVulnerabilities = [];
     }
 }
 
-function populateVulnerabilitySelect() {
+// Populate vulnerability dropdown
+function populateVulnerabilityDropdown() {
     const select = document.getElementById('vulnerabilitySelect');
     if (!select) return;
-
-    // Clear existing options except the first one
-    select.innerHTML = '<option value="">-- Select a vulnerability to report --</option>';
-
-    // Group vulnerabilities by severity
-    const grouped = {
-        critical: [],
-        high: [],
-        medium: [],
-        low: []
-    };
-
-    availableVulnerabilities.forEach(vuln => {
-        if (vuln.status === 'open' || vuln.status === 'in_progress') {
-            grouped[vuln.severity]?.push(vuln);
-        }
+    
+    select.innerHTML = '<option value="">-- Select a vulnerability to report on --</option>';
+    
+    // Only show open vulnerabilities
+    const openVulnerabilities = allVulnerabilities.filter(v => 
+        v.status === 'open' || v.status === 'in_progress'
+    );
+    
+    openVulnerabilities.forEach(vuln => {
+        const option = document.createElement('option');
+        option.value = vuln.id;
+        option.textContent = `#${vuln.id} - ${vuln.title} (${vuln.severity.toUpperCase()})`;
+        select.appendChild(option);
     });
-
-    // Add vulnerabilities by severity groups
-    ['critical', 'high', 'medium', 'low'].forEach(severity => {
-        if (grouped[severity].length > 0) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = `${severity.toUpperCase()} Severity`;
-            
-            grouped[severity].forEach(vuln => {
-                const option = document.createElement('option');
-                option.value = vuln.id;
-                option.textContent = `#${vuln.id} - ${vuln.title} (+${vuln.exp_reward} EXP)`;
-                option.dataset.vulnerability = JSON.stringify(vuln);
-                optgroup.appendChild(option);
-            });
-            
-            select.appendChild(optgroup);
-        }
-    });
+    
+    console.log(`Populated dropdown with ${openVulnerabilities.length} open vulnerabilities`);
 }
 
-function updateVulnerabilityDetails() {
+// Update vulnerability info when selected
+function updateVulnerabilityInfo() {
     const select = document.getElementById('vulnerabilitySelect');
-    const preview = document.getElementById('vulnerabilityPreview');
+    const infoDiv = document.getElementById('vulnerabilityInfo');
+    const detailsDiv = document.getElementById('vulnDetails');
     
-    if (!select || !preview) return;
-
-    const selectedOption = select.options[select.selectedIndex];
+    if (!select || !infoDiv || !detailsDiv) return;
     
-    if (selectedOption && selectedOption.value) {
-        selectedVulnerability = JSON.parse(selectedOption.dataset.vulnerability);
-        
-        // Update preview
-        document.getElementById('previewId').textContent = `#${selectedVulnerability.id}`;
-        document.getElementById('previewTitle').textContent = selectedVulnerability.title;
-        document.getElementById('previewSeverity').innerHTML = `<span class="severity-badge severity-${selectedVulnerability.severity}">${selectedVulnerability.severity.toUpperCase()}</span>`;
-        document.getElementById('previewStatus').innerHTML = `<span class="status-badge status-${selectedVulnerability.status}">${formatStatus(selectedVulnerability.status)}</span>`;
-        document.getElementById('previewExp').textContent = `+${selectedVulnerability.exp_reward} EXP`;
-        document.getElementById('previewDescription').textContent = selectedVulnerability.description;
-        
-        preview.style.display = 'block';
+    if (select.value) {
+        selectedVulnerability = allVulnerabilities.find(v => v.id == select.value);
+        if (selectedVulnerability) {
+            detailsDiv.innerHTML = `
+                <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">
+                    ${escapeHtml(selectedVulnerability.title)}
+                </h4>
+                <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    <strong>Severity:</strong> ${selectedVulnerability.severity.toUpperCase()} | 
+                    <strong>EXP Reward:</strong> ${selectedVulnerability.exp_reward || 100}
+                </p>
+                <p style="color: var(--text-primary);">
+                    ${escapeHtml(selectedVulnerability.description)}
+                </p>
+                ${selectedVulnerability.reporter_name ? 
+                    `<p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                        <strong>Reported by:</strong> ${escapeHtml(selectedVulnerability.reporter_name)}
+                    </p>` : ''}
+            `;
+            infoDiv.classList.add('show');
+        }
     } else {
+        infoDiv.classList.remove('show');
         selectedVulnerability = null;
-        preview.style.display = 'none';
     }
 }
 
-// ===================== REPORTS FUNCTIONALITY =====================
-
+// Load reports
 async function loadReports() {
+    console.log('Loading reports...');
     const reportsList = document.getElementById('reportsList');
+    
+    if (!reportsList) {
+        console.error('Reports list element not found');
+        return;
+    }
+    
     reportsList.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-        const statusFilter = document.getElementById('statusFilter')?.value;
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
         let url = `${API_URL}/reports?page=${currentPage}&limit=${itemsPerPage}`;
         
-        if (statusFilter !== '') {
-            url += `&status=${statusFilter}`;
+        // Add filters based on current tab
+        if (currentTab === 'my-reports' && user.id) {
+            url = `${API_URL}/reports/user/${user.id}?page=${currentPage}&limit=${itemsPerPage}`;
+        } else if (currentTab !== 'all') {
+            const statusMap = {
+                'open': 0,
+                'in-progress': 1,
+                'resolved': 2
+            };
+            if (statusMap[currentTab] !== undefined) {
+                url += `&status=${statusMap[currentTab]}`;
+            }
         }
+
+        console.log('Fetching reports from:', url);
 
         const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
 
         if (response.ok) {
             const data = await response.json();
-            allReports = data.reports || [];
-            displayReports(allReports);
+            console.log('Reports loaded:', data);
+            displayReports(data.reports || []);
             displayPagination(data.pagination || {});
-            updateReportStats(allReports);
         } else {
-            throw new Error('Failed to load reports');
+            console.error('Failed to load reports:', response.status);
+            throw new Error(`Server returned ${response.status}`);
         }
     } catch (error) {
         console.error('Error loading reports:', error);
-        reportsList.innerHTML = '<p class="error">Error loading reports. Please try again later.</p>';
-        updateReportStats([]);
+        reportsList.innerHTML = `
+            <div class="error">
+                Failed to load reports. Please check your connection and try again.
+                <br><small>${error.message}</small>
+            </div>
+        `;
     }
 }
 
+// Display reports
 function displayReports(reports) {
     const reportsList = document.getElementById('reportsList');
+    if (!reportsList) return;
+    
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (!reports || reports.length === 0) {
-        reportsList.innerHTML = '<p class="no-data">No reports found. Create your first report!</p>';
+        reportsList.innerHTML = `
+            <div class="no-data">
+                No reports found. Be the first to submit a vulnerability report!
+            </div>
+        `;
         return;
     }
 
+    console.log(`Displaying ${reports.length} reports`);
+
     reportsList.innerHTML = reports.map(report => {
-        const statusText = report.status === 0 ? 'Open' : 'Closed';
-        const statusClass = report.status === 0 ? 'status-open' : 'status-closed';
         const isOwner = currentUser.id === report.user_id;
-        
+        const statusText = getStatusText(report.status);
+        const statusClass = getStatusClass(report.status);
+
         return `
             <div class="report-card">
                 <div class="report-header">
-                    <div class="report-title-row">
-                        <span class="report-id">Report #${report.id}</span>
-                        <span class="vulnerability-id">Vulnerability #${report.vulnerability_id}</span>
-                        <h3 class="report-title">${escapeHtml(report.vulnerability_title || 'Vulnerability Report')}</h3>
+                    <div class="report-info">
+                        <h3 class="report-title">Report #${report.id}</h3>
+                        <div class="report-vulnerability">
+                            Vulnerability: <a href="#" onclick="viewVulnerability(${report.vulnerability_id}); return false;">
+                                ${escapeHtml(report.vulnerability_title || `Vulnerability #${report.vulnerability_id}`)}
+                            </a>
+                        </div>
+                        <div class="report-reporter">
+                            Reported by: ${escapeHtml(report.username || 'Anonymous')}
+                        </div>
                     </div>
                     <div class="report-meta">
                         <span class="report-status ${statusClass}">${statusText}</span>
-                        <span class="report-severity severity-${report.vulnerability_severity || 'medium'}">
-                            ${(report.vulnerability_severity || 'medium').toUpperCase()}
-                        </span>
-                        <span class="report-points">+${report.vulnerability_points || 0} EXP</span>
-                    </div>
-                </div>
-                <div class="report-body">
-                    ${report.report_summary ? `
-                        <div class="report-summary">
-                            <strong>Report Summary:</strong>
-                            <p>${escapeHtml(report.report_summary).substring(0, 300)}${report.report_summary.length > 300 ? '...' : ''}</p>
-                        </div>
-                    ` : ''}
-                    <div class="report-info">
-                        <span><i class="icon-user"></i> Reported by: ${report.username || 'Unknown'}</span>
-                        <span><i class="icon-star"></i> Reputation: ${report.user_reputation || 0}</span>
-                        <span><i class="icon-clock"></i> ${formatDate(report.created_at)}</span>
+                        <span class="report-exp">+${report.vulnerability_points || 100} EXP</span>
+                        <span class="report-date">${formatDate(report.created_at)}</span>
                     </div>
                 </div>
                 <div class="report-actions">
-                    <button class="btn-action btn-view" onclick="viewReportDetails(${report.id})">
-                        <i class="icon-eye"></i> View Details
+                    <button class="btn-action" onclick="viewReportDetails(${report.id})">
+                        View Details
                     </button>
-                    <button class="btn-action btn-vulnerability" onclick="window.location.href='/vulnerabilities.html#${report.vulnerability_id}'">
-                        <i class="icon-bug"></i> View Vulnerability
-                    </button>
-                    ${report.status === 0 && isOwner ? `
-                        <button class="btn-action btn-edit" onclick="editReportSummary(${report.id}, '${escapeHtml(report.report_summary || '').replace(/'/g, "\\'")}')">
-                            <i class="icon-edit"></i> Edit Summary
+                    ${isOwner && report.status === 0 ? `
+                        <button class="btn-action" onclick="updateReportStatus(${report.id}, 1)">
+                            Mark In Progress
                         </button>
                     ` : ''}
                 </div>
@@ -253,213 +276,169 @@ function displayReports(reports) {
     }).join('');
 }
 
-function updateReportStats(reports) {
-    const totalReports = document.getElementById('totalReports');
-    const openReports = document.getElementById('openReports');
-    const closedReports = document.getElementById('closedReports');
+// Load statistics
+async function loadStats() {
+    console.log('Loading statistics...');
     
-    if (totalReports) totalReports.textContent = reports.length;
-    if (openReports) openReports.textContent = reports.filter(r => r.status === 0).length;
-    if (closedReports) closedReports.textContent = reports.filter(r => r.status === 1).length;
-}
-
-function searchReports() {
-    const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
-    
-    if (!searchTerm) {
-        displayReports(allReports);
-        return;
-    }
-    
-    const filteredReports = allReports.filter(report => {
-        const vulnId = report.vulnerability_id.toString();
-        const title = (report.vulnerability_title || '').toLowerCase();
-        const summary = (report.report_summary || '').toLowerCase();
-        const username = (report.username || '').toLowerCase();
+    try {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
         
-        return vulnId.includes(searchTerm) || 
-               title.includes(searchTerm) || 
-               summary.includes(searchTerm) ||
-               username.includes(searchTerm);
-    });
-    
-    displayReports(filteredReports);
-}
+        const response = await fetch(`${API_URL}/reports?limit=1000`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-// Report Modal functions
-async function openCreateReportModal() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!user.id) {
-        showNotification('Please login to create a report', 'error');
-        setTimeout(() => {
-            window.location.href = '/login.html';
-        }, 1500);
-        return;
+        if (response.ok) {
+            const data = await response.json();
+            const reports = data.reports || [];
+            
+            // Calculate stats
+            const totalReports = reports.length;
+            const openReports = reports.filter(r => r.status === 0).length;
+            const resolvedReports = reports.filter(r => r.status === 2).length;
+            const userReports = reports.filter(r => r.user_id === user.id).length;
+
+            // Update display
+            updateStatDisplay('totalReports', totalReports);
+            updateStatDisplay('openReports', openReports);
+            updateStatDisplay('resolvedReports', resolvedReports);
+            updateStatDisplay('userReports', userReports);
+            
+            console.log('Stats updated:', { totalReports, openReports, resolvedReports, userReports });
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        // Set default values on error
+        updateStatDisplay('totalReports', 0);
+        updateStatDisplay('openReports', 0);
+        updateStatDisplay('resolvedReports', 0);
+        updateStatDisplay('userReports', 0);
     }
-
-    // Load fresh vulnerability list
-    await loadAvailableVulnerabilities();
-    
-    document.getElementById('createReportModal').style.display = 'block';
-    document.getElementById('vulnerabilityPreview').style.display = 'none';
 }
 
-function closeCreateReportModal() {
-    document.getElementById('createReportModal').style.display = 'none';
-    document.getElementById('createReportForm').reset();
-    document.getElementById('vulnerabilityPreview').style.display = 'none';
-    selectedVulnerability = null;
+function updateStatDisplay(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+    }
 }
 
-async function handleCreateReport(e) {
+// Handle report submission
+async function handleReportSubmit(e) {
     e.preventDefault();
-    
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!user.id) {
-        showNotification('Please login to create a report', 'error');
-        return;
-    }
+    console.log('Submitting report...');
 
     const vulnerabilityId = document.getElementById('vulnerabilitySelect').value;
-    const reportSummary = document.getElementById('reportSummary').value;
+    const findings = document.getElementById('reportFindings').value;
+    const severity = document.getElementById('severityAssessment').value;
+    const notes = document.getElementById('additionalNotes').value;
 
     if (!vulnerabilityId) {
         showNotification('Please select a vulnerability', 'error');
         return;
     }
 
+    if (!findings || findings.trim().length < 10) {
+        showNotification('Please provide detailed findings (at least 10 characters)', 'error');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+
+    if (!user.id || !token) {
+        showNotification('Authentication required. Please login again.', 'error');
+        setTimeout(() => window.location.href = '/login.html', 2000);
+        return;
+    }
+
     try {
+        // Prepare report data - using the exact format expected by the backend
+        const reportData = {
+            user_id: parseInt(user.id),
+            vulnerability_id: parseInt(vulnerabilityId)
+        };
+
+        console.log('Sending report data:', reportData);
+
         const response = await fetch(`${API_URL}/reports`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-                user_id: user.id,
-                vulnerability_id: parseInt(vulnerabilityId),
-                report_summary: reportSummary
-            })
+            body: JSON.stringify(reportData)
         });
 
-        const data = await response.json();
+        const responseData = await response.json();
+        console.log('Server response:', responseData);
 
         if (response.ok) {
-            showNotification(`Report created successfully for vulnerability #${vulnerabilityId}!`, 'success');
-            closeCreateReportModal();
-            loadReports();
+            showNotification('Report submitted successfully! You earned EXP points.', 'success');
+            closeReportModal();
+            
+            // Reload data
+            await loadReports();
+            await loadStats();
+            
+            // Reset form
+            document.getElementById('reportForm').reset();
+            document.getElementById('vulnerabilityInfo').classList.remove('show');
         } else {
-            showNotification(data.message || 'Failed to create report', 'error');
+            throw new Error(responseData.message || 'Failed to submit report');
         }
     } catch (error) {
-        console.error('Create report error:', error);
-        showNotification('Failed to create report', 'error');
+        console.error('Error submitting report:', error);
+        showNotification(error.message || 'Error submitting report. Please try again.', 'error');
     }
 }
 
-async function viewReportDetails(reportId) {
-    const modal = document.getElementById('reportDetailsModal');
-    const detailsDiv = document.getElementById('reportDetails');
-    
-    modal.style.display = 'block';
-    detailsDiv.innerHTML = '<div class="loading-spinner"></div>';
+// View vulnerability details
+function viewVulnerability(vulnerabilityId) {
+    console.log('Viewing vulnerability:', vulnerabilityId);
+    // You can implement navigation to vulnerability details page
+    // window.location.href = `/vulnerabilities.html#${vulnerabilityId}`;
+}
 
+// View report details
+async function viewReportDetails(reportId) {
+    console.log('Viewing report details:', reportId);
+    
     try {
+        const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/reports/${reportId}`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
 
-        const data = await response.json();
-
-        if (response.ok && data.report) {
-            displayReportDetails(data.report);
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Report details:', data.report);
+            // You can show details in a modal or navigate to details page
+            showNotification('Report details loaded (check console)', 'info');
         } else {
-            detailsDiv.innerHTML = '<div class="error">Failed to load report details</div>';
+            throw new Error('Failed to load report details');
         }
     } catch (error) {
         console.error('Error loading report details:', error);
-        detailsDiv.innerHTML = '<div class="error">Failed to load report details</div>';
+        showNotification('Error loading report details', 'error');
     }
 }
 
-function displayReportDetails(report) {
-    const detailsDiv = document.getElementById('reportDetails');
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const statusText = report.status === 0 ? 'Open' : 'Closed';
-    const statusClass = report.status === 0 ? 'status-open' : 'status-closed';
-    const isOwner = currentUser.id === report.user_id;
-    
-    detailsDiv.innerHTML = `
-        <div class="detail-section">
-            <h3>Report Information</h3>
-            <div class="detail-ids">
-                <span class="detail-report-id">Report ID: #${report.id}</span>
-                <span class="detail-vuln-id">Vulnerability ID: #${report.vulnerability_id}</span>
-            </div>
-            <div class="detail-meta">
-                <span class="report-status ${statusClass}">${statusText}</span>
-                <span class="vuln-severity severity-${report.vulnerability_severity || 'medium'}">
-                    ${(report.vulnerability_severity || 'medium').toUpperCase()}
-                </span>
-                <span class="vuln-points">+${report.vulnerability_points || 0} EXP</span>
-            </div>
-        </div>
-        
-        <div class="detail-section">
-            <h3>Vulnerability Details</h3>
-            <div class="detail-info">
-                <p><strong>Title:</strong> ${escapeHtml(report.vulnerability_title || 'N/A')}</p>
-                <p><strong>Description:</strong> ${escapeHtml(report.vulnerability_description || 'N/A')}</p>
-                <p><strong>Severity:</strong> <span class="severity-badge severity-${report.vulnerability_severity}">${(report.vulnerability_severity || 'medium').toUpperCase()}</span></p>
-            </div>
-        </div>
-        
-        <div class="detail-section">
-            <h3>Report Summary</h3>
-            <div class="report-summary-detail">
-                ${report.report_summary ? `<p>${escapeHtml(report.report_summary).replace(/\n/g, '<br>')}</p>` : '<p>No summary provided</p>'}
-            </div>
-        </div>
-        
-        <div class="detail-section">
-            <h3>Report Metadata</h3>
-            <div class="detail-info">
-                <p><strong>Reported by:</strong> ${report.username || 'Unknown'}</p>
-                <p><strong>User Reputation:</strong> ${report.user_reputation || 0}</p>
-                <p><strong>Created:</strong> ${formatDate(report.created_at)}</p>
-                ${report.updated_at ? `<p><strong>Updated:</strong> ${formatDate(report.updated_at)}</p>` : ''}
-                ${report.closer_username ? `<p><strong>Closed by:</strong> ${report.closer_username}</p>` : ''}
-            </div>
-        </div>
-        
-        <div class="detail-actions">
-            <button class="btn-primary" onclick="window.location.href='/vulnerabilities.html#${report.vulnerability_id}'">
-                View Vulnerability
-            </button>
-            ${isOwner && report.status === 0 ? `
-                <button class="btn-secondary" onclick="editReportSummary(${report.id}, '${escapeHtml(report.report_summary || '').replace(/'/g, "\\'")}')">
-                    Edit Summary
-                </button>
-            ` : ''}
-            <button class="btn-secondary" onclick="closeReportDetailsModal()">Close</button>
-        </div>
-    `;
-}
-
-function closeReportDetailsModal() {
-    document.getElementById('reportDetailsModal').style.display = 'none';
-}
-
-async function editReportSummary(reportId, currentSummary) {
-    const newSummary = prompt('Edit report summary:', currentSummary || '');
-    
-    if (newSummary === null || newSummary === currentSummary) return;
+// Update report status
+async function updateReportStatus(reportId, newStatus) {
+    console.log('Updating report status:', reportId, newStatus);
     
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!user.id) {
-        showNotification('Please login to edit a report', 'error');
+    const token = localStorage.getItem('token');
+
+    if (!user.id || !token) {
+        showNotification('Authentication required', 'error');
         return;
     }
 
@@ -467,305 +446,79 @@ async function editReportSummary(reportId, currentSummary) {
         const response = await fetch(`${API_URL}/reports/${reportId}`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                report_summary: newSummary,
-                user_id: user.id,
-                status: 0 // Keep status as open
-            })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showNotification('Report summary updated successfully!', 'success');
-            loadReports();
-            // If details modal is open, refresh it
-            if (document.getElementById('reportDetailsModal')?.style.display === 'block') {
-                viewReportDetails(reportId);
-            }
-        } else {
-            showNotification(data.message || 'Failed to update report summary', 'error');
-        }
-    } catch (error) {
-        console.error('Update report error:', error);
-        showNotification('Failed to update report summary', 'error');
-    }
-}
-
-// ===================== REVIEWS FUNCTIONALITY (Backward Compatibility) =====================
-
-async function loadReviews() {
-    const reviewsList = document.getElementById('reviewsList');
-    reviewsList.innerHTML = '<div class="loading-spinner"></div>';
-
-    try {
-        const response = await fetch(`${API_URL}/reviews?page=${currentPage}&limit=${itemsPerPage}`);
-
-        if (response.ok) {
-            const data = await response.json();
-            displayReviews(data.reviews || []);
-            displayPagination(data.pagination || {});
-            const avgRating = data.averageRating || data.average || 0;
-            const totalCount = (data.pagination && data.pagination.total) || 0;
-            updateReviewStats(totalCount, avgRating);
-        } else {
-            throw new Error('Failed to load reviews');
-        }
-    } catch (error) {
-        console.error('Error loading reviews:', error);
-        reviewsList.innerHTML = '<p class="error">Error loading reviews. Please try again later.</p>';
-        updateReviewStats(0, 0);
-    }
-}
-
-function displayReviews(reviews) {
-    const reviewsList = document.getElementById('reviewsList');
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-
-    if (!reviews || reviews.length === 0) {
-        reviewsList.innerHTML = '<p class="no-data">No reviews yet. Be the first to share your experience!</p>';
-        return;
-    }
-
-    reviewsList.innerHTML = reviews.map(review => {
-        const isOwner = currentUser.id === review.user_id;
-        const userInitial = review.username ? review.username.charAt(0).toUpperCase() : '?';
-        
-        return `
-            <div class="review-card">
-                <div class="review-header">
-                    <div class="review-user">
-                        <div class="user-avatar">${userInitial}</div>
-                        <div class="user-info">
-                            <h3 class="user-name">${escapeHtml(review.username || 'Anonymous')}</h3>
-                            <span class="user-level">Level ${review.user_level || 1}</span>
-                        </div>
-                    </div>
-                    <div class="review-meta">
-                        <div class="review-date">${formatDate(review.created_at)}</div>
-                        <div class="review-rating">
-                            ${generateStars(review.rating)}
-                        </div>
-                    </div>
-                </div>
-                ${review.vulnerability_id ? `
-                    <div class="review-vulnerability">
-                        <span class="vuln-badge">Vulnerability #${review.vulnerability_id}</span>
-                    </div>
-                ` : ''}
-                ${review.comment ? `
-                    <div class="review-content">
-                        <p class="review-comment">${escapeHtml(review.comment)}</p>
-                    </div>
-                ` : ''}
-                ${isOwner ? `
-                    <div class="review-actions">
-                        <button class="btn-edit" onclick="editReview(${review.id}, ${review.rating}, '${escapeHtml(review.comment || '').replace(/'/g, "\\'")}')">Edit</button>
-                        <button class="btn-delete" onclick="deleteReview(${review.id})">Delete</button>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
-}
-
-function updateReviewStats(total, average) {
-    const totalReviews = document.getElementById('totalReviews');
-    const averageRating = document.getElementById('averageRating');
-    
-    if (totalReviews) {
-        totalReviews.textContent = total || 0;
-    }
-    
-    if (averageRating) {
-        const avgValue = (average !== null && average !== undefined && !isNaN(average)) 
-            ? parseFloat(average).toFixed(1) 
-            : '0.0';
-        averageRating.textContent = avgValue;
-    }
-}
-
-// Star rating and review functions...
-function setupStarRating() {
-    const starContainer = document.getElementById('starRating');
-    if (!starContainer) return;
-    
-    const stars = starContainer.querySelectorAll('.star');
-    
-    stars.forEach(star => {
-        star.addEventListener('click', () => {
-            selectedRating = parseInt(star.dataset.rating);
-            updateStarDisplay(selectedRating);
-        });
-        
-        star.addEventListener('mouseenter', () => {
-            const rating = parseInt(star.dataset.rating);
-            updateStarDisplay(rating, true);
-        });
-    });
-    
-    starContainer.addEventListener('mouseleave', () => {
-        updateStarDisplay(selectedRating);
-    });
-}
-
-function updateStarDisplay(rating, isHover = false) {
-    const stars = document.querySelectorAll('#starRating .star');
-    stars.forEach(star => {
-        const starRating = parseInt(star.dataset.rating);
-        if (starRating <= rating) {
-            star.classList.add('filled');
-            star.classList.remove('empty');
-        } else {
-            star.classList.remove('filled');
-            star.classList.add('empty');
-        }
-    });
-    
-    const ratingDisplay = document.getElementById('ratingDisplay');
-    if (ratingDisplay && !isHover) {
-        const ratingText = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
-        ratingDisplay.textContent = rating > 0 ? `${rating}/5 - ${ratingText[rating]}` : '';
-    }
-}
-
-function openReviewModal() {
-    editingReviewId = null;
-    selectedRating = 0;
-    updateStarDisplay(0);
-    
-    const modal = document.getElementById('reviewModal');
-    if (modal) modal.style.display = 'block';
-}
-
-function closeReviewModal() {
-    const modal = document.getElementById('reviewModal');
-    if (modal) modal.style.display = 'none';
-    
-    const reviewForm = document.getElementById('reviewForm');
-    if (reviewForm) reviewForm.reset();
-    
-    selectedRating = 0;
-    updateStarDisplay(0);
-    editingReviewId = null;
-}
-
-async function handleReviewSubmit(e) {
-    e.preventDefault();
-
-    if (selectedRating === 0) {
-        showNotification('Please select a rating', 'error');
-        return;
-    }
-
-    const comment = document.getElementById('reviewComment')?.value.trim();
-    
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showNotification('Please login to submit a review', 'error');
-            return;
-        }
-
-        const url = editingReviewId ? 
-            `${API_URL}/reviews/${editingReviewId}` : 
-            `${API_URL}/reviews`;
-        
-        const method = editingReviewId ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method: method,
-            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                rating: selectedRating,
-                comment: comment || null,
-                vulnerabilityId: null
+                status: newStatus,
+                user_id: parseInt(user.id)
             })
         });
 
-        const data = await response.json();
+        const responseData = await response.json();
+        console.log('Update response:', responseData);
 
         if (response.ok) {
-            showNotification(
-                editingReviewId ? 'Review updated successfully!' : 'Review submitted successfully!', 
-                'success'
-            );
-            closeReviewModal();
-            await loadReviews();
+            showNotification('Report status updated successfully', 'success');
+            await loadReports();
+            await loadStats();
         } else {
-            throw new Error(data.message || 'Failed to submit review');
+            throw new Error(responseData.message || 'Failed to update report status');
         }
     } catch (error) {
-        console.error('Error submitting review:', error);
-        showNotification(error.message || 'Error submitting review', 'error');
+        console.error('Error updating report:', error);
+        showNotification(error.message || 'Error updating report status', 'error');
     }
 }
 
-async function editReview(reviewId, rating, comment) {
-    editingReviewId = reviewId;
-    selectedRating = rating;
-    updateStarDisplay(rating);
+// Switch tabs
+function switchTab(tab) {
+    console.log('Switching to tab:', tab);
+    currentTab = tab;
+    currentPage = 1;
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
     
-    const reviewComment = document.getElementById('reviewComment');
-    if (reviewComment) reviewComment.value = comment || '';
+    // Find and activate the correct button
+    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => {
+        const btnText = btn.textContent.toLowerCase();
+        if (tab === 'all' && btnText.includes('all')) return true;
+        if (tab === 'my-reports' && btnText.includes('my')) return true;
+        if (tab === 'open' && btnText.includes('open')) return true;
+        if (tab === 'in-progress' && btnText.includes('progress')) return true;
+        if (tab === 'resolved' && btnText.includes('resolved')) return true;
+        return false;
+    });
     
-    const modal = document.getElementById('reviewModal');
-    if (modal) modal.style.display = 'block';
-}
-
-async function deleteReview(reviewId) {
-    if (!confirm('Are you sure you want to delete this review?')) return;
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/reviews/${reviewId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            showNotification('Review deleted successfully!', 'success');
-            await loadReviews();
-        } else {
-            const data = await response.json();
-            throw new Error(data.message || 'Failed to delete review');
-        }
-    } catch (error) {
-        console.error('Error deleting review:', error);
-        showNotification(error.message || 'Error deleting review', 'error');
+    if (activeBtn) {
+        activeBtn.classList.add('active');
     }
-}
 
-// ===================== SHARED FUNCTIONALITY =====================
+    // Reload reports
+    loadReports();
+}
 
 // Pagination
 function displayPagination(pagination) {
     const paginationDiv = document.getElementById('pagination');
+    if (!paginationDiv) return;
     
     if (!pagination || pagination.totalPages <= 1) {
-        if (paginationDiv) paginationDiv.innerHTML = '';
+        paginationDiv.innerHTML = '';
         return;
     }
 
     let html = '<div class="pagination-controls">';
     
-    // Previous button
     if (pagination.page > 1) {
         html += `<button class="page-btn" onclick="changePage(${pagination.page - 1})">Previous</button>`;
     }
 
-    // Page numbers
-    const maxPages = 5;
-    const startPage = Math.max(1, pagination.page - Math.floor(maxPages / 2));
-    const endPage = Math.min(pagination.totalPages, startPage + maxPages - 1);
+    const startPage = Math.max(1, pagination.page - 2);
+    const endPage = Math.min(pagination.totalPages, pagination.page + 2);
 
     for (let i = startPage; i <= endPage; i++) {
         if (i === pagination.page) {
@@ -775,54 +528,61 @@ function displayPagination(pagination) {
         }
     }
 
-    // Next button
     if (pagination.page < pagination.totalPages) {
         html += `<button class="page-btn" onclick="changePage(${pagination.page + 1})">Next</button>`;
     }
 
     html += '</div>';
-    if (paginationDiv) paginationDiv.innerHTML = html;
+    paginationDiv.innerHTML = html;
 }
 
 function changePage(page) {
+    console.log('Changing to page:', page);
     currentPage = page;
-    loadPageData();
-    window.scrollTo(0, 0);
+    loadReports();
 }
 
-// Utility functions
-function formatStatus(status) {
-    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function generateStars(rating) {
-    let stars = '';
-    for (let i = 1; i <= 5; i++) {
-        stars += `<span class="star ${i <= rating ? '' : 'empty'}">⭐</span>`;
-    }
-    return stars;
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-        if (diffHours === 0) {
-            const diffMins = Math.floor(diffTime / (1000 * 60));
-            return diffMins <= 1 ? 'Just now' : `${diffMins} minutes ago`;
+// Modal functions
+function openReportModal() {
+    console.log('Opening report modal');
+    const modal = document.getElementById('reportModal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.getElementById('reportForm').reset();
+        const infoDiv = document.getElementById('vulnerabilityInfo');
+        if (infoDiv) {
+            infoDiv.classList.remove('show');
         }
-        return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
-    } else if (diffDays === 1) {
-        return 'Yesterday';
-    } else if (diffDays < 30) {
-        return `${diffDays} days ago`;
-    } else {
-        return date.toLocaleDateString();
     }
+}
+
+function closeReportModal() {
+    console.log('Closing report modal');
+    const modal = document.getElementById('reportModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Helper functions
+function getStatusText(status) {
+    const statusMap = {
+        0: 'Open',
+        1: 'In Progress',
+        2: 'Resolved',
+        3: 'Closed'
+    };
+    return statusMap[status] || 'Unknown';
+}
+
+function getStatusClass(status) {
+    const classMap = {
+        0: 'status-open',
+        1: 'status-in_progress',
+        2: 'status-resolved',
+        3: 'status-closed'
+    };
+    return classMap[status] || '';
 }
 
 function escapeHtml(text) {
@@ -837,38 +597,61 @@ function escapeHtml(text) {
     return text.toString().replace(/[&<>"']/g, m => map[m]);
 }
 
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 function showNotification(message, type = 'info') {
-    // Remove any existing notifications
+    console.log(`Notification (${type}):`, message);
+    
+    // Remove existing notifications
     const existingNotifications = document.querySelectorAll('.notification');
     existingNotifications.forEach(n => n.remove());
     
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
+    notification.className = 'notification show';
     notification.textContent = message;
+    
+    const bgColor = type === 'success' ? 'rgba(76, 175, 80, 0.9)' : 
+                    type === 'error' ? 'rgba(244, 67, 54, 0.9)' : 
+                    'rgba(0, 212, 255, 0.9)';
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${bgColor};
+        color: white;
+        border-radius: 8px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    `;
+    
     document.body.appendChild(notification);
-
+    
     setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
 // Export functions to global scope
-window.openReviewModal = openReviewModal;
-window.closeReviewModal = closeReviewModal;
-window.openCreateReportModal = openCreateReportModal;
-window.closeCreateReportModal = closeCreateReportModal;
-window.closeReportDetailsModal = closeReportDetailsModal;
+window.openReportModal = openReportModal;
+window.closeReportModal = closeReportModal;
 window.viewReportDetails = viewReportDetails;
-window.editReportSummary = editReportSummary;
-window.editReview = editReview;
-window.deleteReview = deleteReview;
+window.updateReportStatus = updateReportStatus;
+window.switchTab = switchTab;
 window.changePage = changePage;
-window.searchReports = searchReports;
-window.updateVulnerabilityDetails = updateVulnerabilityDetails;
+window.viewVulnerability = viewVulnerability;
+window.updateVulnerabilityInfo = updateVulnerabilityInfo;

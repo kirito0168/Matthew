@@ -3,58 +3,751 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports - SAO Bug Bounty System</title>
+    <title>SAO Bug Bounty - Vulnerability Reports</title>
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/reports.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        /* Vulnerability Reports Page Styles */
+        :root {
+            --primary-color: #00d4ff;
+            --accent-color: #ff6b35;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --dark-bg: #0a0e1a;
+            --card-bg: rgba(0, 0, 0, 0.7);
+            --border-color: rgba(0, 212, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+        }
+
+        .reports-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            min-height: calc(100vh - 100px);
+            position: relative;
+            z-index: 10;
+        }
+
+        .reports-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-shadow: 0 0 30px var(--primary-color);
+            margin-bottom: 0.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .page-title.glitch {
+            position: relative;
+            animation: glitch 2s linear infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 0 0 30px var(--primary-color); }
+            25% { text-shadow: -2px 0 #ff0000, 2px 0 #00ff00, 0 0 30px var(--primary-color); }
+            50% { text-shadow: 2px 0 #ff0000, -2px 0 #00ff00, 0 0 30px var(--primary-color); }
+            75% { text-shadow: 0 0 30px var(--primary-color); }
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        /* Stats Section */
+        .reports-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.5s ease-out 0.2s backwards;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-shadow: 0 0 20px var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.5);
+        }
+
+        /* Tabs */
+        .reports-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .tab-btn {
+            padding: 0.8rem 2rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .tab-btn:hover:not(.active) {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Reports List */
+        .reports-list {
+            animation: fadeInUp 0.5s ease-out 0.4s backwards;
+            min-height: 400px;
+        }
+
+        .report-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .report-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+            border-color: var(--primary-color);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .report-info {
+            flex: 1;
+        }
+
+        .report-title {
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-vulnerability {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-vulnerability a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .report-vulnerability a:hover {
+            color: var(--primary-color);
+        }
+
+        .report-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        .report-status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-open {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--primary-color);
+        }
+
+        .status-in_progress {
+            background: rgba(255, 152, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .status-resolved {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+
+        .status-closed {
+            background: rgba(128, 128, 128, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .report-exp {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .report-content {
+            margin: 1.5rem 0;
+        }
+
+        .report-description {
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .report-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-action {
+            padding: 0.6rem 1.5rem;
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            transform: scale(1.05);
+        }
+
+        .btn-resolve {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .btn-resolve:hover {
+            background: var(--success);
+            color: white;
+        }
+
+        /* Report Form Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.95), rgba(0, 0, 0, 0.95));
+            margin: 2% auto;
+            padding: 2.5rem;
+            border: 2px solid var(--primary-color);
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 212, 255, 0.4);
+            animation: slideDown 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-close {
+            color: var(--text-secondary);
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin: 0;
+            text-shadow: 0 0 20px var(--primary-color);
+        }
+
+        .report-form {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .form-label {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-select {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .form-select option {
+            background: var(--dark-bg);
+            color: var(--text-primary);
+        }
+
+        .vulnerability-info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .vulnerability-info.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-textarea {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            resize: vertical;
+            min-height: 150px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .form-textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .btn-submit,
+        .btn-cancel {
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            border: none;
+        }
+
+        .btn-submit:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.5);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 2px solid var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .btn-cancel:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        /* Loading and Messages */
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 212, 255, 0.1);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 3rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 4rem;
+            font-size: 1.2rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .error {
+            text-align: center;
+            color: var(--danger);
+            padding: 4rem;
+            font-size: 1.2rem;
+            background: rgba(244, 67, 54, 0.1);
+            border-radius: 12px;
+            border: 1px solid var(--danger);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 3rem 0;
+            gap: 0.5rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 0.5rem;
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+        }
+
+        .page-btn {
+            padding: 0.7rem 1.2rem;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-primary);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .page-btn:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            transform: scale(1.1);
+        }
+
+        .page-current {
+            padding: 0.7rem 1.2rem;
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            border-radius: 25px;
+            font-weight: bold;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .reports-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .report-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .report-meta {
+                align-items: flex-start;
+                width: 100%;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                padding: 1.5rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn-submit,
+            .btn-cancel {
+                width: 100%;
+            }
+
+            .reports-tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
+    <div class="sao-background">
+        <div class="floating-particles"></div>
+        <div class="digital-grid"></div>
+    </div>
+
+    <nav class="main-nav">
         <div class="nav-container">
             <div class="nav-logo">
-                <a href="/">SAO Bug Bounty</a>
+                <span class="logo-text">SAO Bug Bounty</span>
+                <div class="logo-subtitle">Vulnerability Reports</div>
             </div>
-            <div class="nav-menu">
-                <a href="/" class="nav-link">Home</a>
-                <a href="/vulnerabilities.html" class="nav-link">Vulnerabilities</a>
-                <a href="/reports.html" class="nav-link active">Reports</a>
-                <a href="/rankings.html" class="nav-link">Rankings</a>
-                <a href="/quest-game.html" class="nav-link">Quests</a>
-            </div>
-            <div class="nav-auth">
-                <a href="/login.html" class="nav-link">Login</a>
-                <a href="/register.html" class="nav-link btn-primary">Register</a>
-            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="/vulnerabilities.html" class="nav-link">Vulnerabilities</a></li>
+                <li><a href="/reports.html" class="nav-link active">Reports</a></li>
+                <li><a href="/ranking.html" class="nav-link">Rankings</a></li>
+                <li><a href="/quests.html" class="nav-link">Quests</a></li>
+                <li class="nav-auth"></li>
+            </ul>
         </div>
     </nav>
 
     <main class="reports-container">
         <div class="reports-header">
-            <h1 class="page-title">Vulnerability Reports</h1>
-            <button class="btn-primary" onclick="openCreateReportModal()">Create New Report</button>
+            <h1 class="page-title glitch" data-text="VULNERABILITY REPORTS">VULNERABILITY REPORTS</h1>
+            <p class="page-subtitle">Submit findings and help resolve vulnerabilities in the system</p>
+            
+            <div class="reports-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalReports">0</div>
+                    <div class="stat-label">Total Reports</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="openReports">0</div>
+                    <div class="stat-label">Open Reports</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="resolvedReports">0</div>
+                    <div class="stat-label">Resolved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="userReports">0</div>
+                    <div class="stat-label">Your Reports</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn-primary" onclick="openReportModal()">
+                    Submit New Report
+                </button>
+            </div>
         </div>
 
-        <div class="reports-filters">
-            <select id="statusFilter" class="filter-select" onchange="loadReports()">
-                <option value="">All Status</option>
-                <option value="0">Open</option>
-                <option value="1">Closed</option>
-            </select>
-            <input type="text" id="searchFilter" class="filter-input" placeholder="Search by vulnerability ID or title..." onkeyup="searchReports()">
-        </div>
-
-        <div class="reports-stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalReports">0</div>
-                <div class="stat-label">Total Reports</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="openReports">0</div>
-                <div class="stat-label">Open Reports</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="closedReports">0</div>
-                <div class="stat-label">Closed Reports</div>
-            </div>
+        <!-- Tabs for filtering reports -->
+        <div class="reports-tabs">
+            <button class="tab-btn active" onclick="switchTab('all')">All Reports</button>
+            <button class="tab-btn" onclick="switchTab('my-reports')">My Reports</button>
+            <button class="tab-btn" onclick="switchTab('open')">Open</button>
+            <button class="tab-btn" onclick="switchTab('in-progress')">In Progress</button>
+            <button class="tab-btn" onclick="switchTab('resolved')">Resolved</button>
         </div>
 
         <div class="reports-list" id="reportsList">
@@ -64,66 +757,584 @@
         <div class="pagination" id="pagination"></div>
     </main>
 
-    <!-- Create Report Modal -->
-    <div class="modal" id="createReportModal">
+    <!-- Report Submission Modal -->
+    <div id="reportModal" class="modal">
         <div class="modal-content">
-            <span class="modal-close" onclick="closeCreateReportModal()">&times;</span>
-            <h2 class="modal-title">Create New Report</h2>
-            <form id="createReportForm" class="report-form">
+            <div class="modal-header">
+                <h2 class="modal-title">Submit Vulnerability Report</h2>
+                <span class="modal-close" onclick="closeReportModal()">&times;</span>
+            </div>
+            <form id="reportForm" class="report-form">
                 <div class="form-group">
                     <label class="form-label">Select Vulnerability</label>
-                    <select id="vulnerabilitySelect" class="form-select" required onchange="updateVulnerabilityDetails()">
-                        <option value="">-- Select a vulnerability to report --</option>
+                    <select id="vulnerabilitySelect" class="form-select" onchange="updateVulnerabilityInfo()" required>
+                        <option value="">-- Select a vulnerability to report on --</option>
                     </select>
-                </div>
-                
-                <div id="vulnerabilityPreview" class="vulnerability-preview" style="display: none;">
-                    <h4>Vulnerability Details</h4>
-                    <div class="preview-content">
-                        <p><strong>ID:</strong> <span id="previewId"></span></p>
-                        <p><strong>Title:</strong> <span id="previewTitle"></span></p>
-                        <p><strong>Severity:</strong> <span id="previewSeverity"></span></p>
-                        <p><strong>Status:</strong> <span id="previewStatus"></span></p>
-                        <p><strong>EXP Reward:</strong> <span id="previewExp"></span></p>
-                        <p><strong>Description:</strong> <span id="previewDescription"></span></p>
+                    <div id="vulnerabilityInfo" class="vulnerability-info">
+                        <div id="vulnDetails"></div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Report Summary</label>
-                    <textarea id="reportSummary" class="form-textarea" rows="8" required
-                              placeholder="Write a detailed report about this vulnerability...
-                              
-• How to reproduce the vulnerability
-• Potential impact and risk assessment
-• Proof of concept (if applicable)
-• Suggested fix or mitigation
-• Any additional notes or observations"></textarea>
+                    <label class="form-label">Your Findings</label>
+                    <textarea 
+                        id="reportFindings" 
+                        class="form-textarea" 
+                        rows="6" 
+                        placeholder="Describe your findings about this vulnerability. Include:
+- Steps to reproduce
+- Impact assessment
+- Proof of concept (if applicable)
+- Suggested fixes or mitigations"
+                        required
+                    ></textarea>
                 </div>
-                
+
+                <div class="form-group">
+                    <label class="form-label">Severity Assessment</label>
+                    <select id="severityAssessment" class="form-select" required>
+                        <option value="">-- Select severity --</option>
+                        <option value="low">Low - Minimal impact</option>
+                        <option value="medium">Medium - Moderate impact</option>
+                        <option value="high">High - Significant impact</option>
+                        <option value="critical">Critical - Severe impact</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Additional Notes (Optional)</label>
+                    <textarea 
+                        id="additionalNotes" 
+                        class="form-textarea" 
+                        rows="4" 
+                        placeholder="Any additional information, references, or notes..."
+                    ></textarea>
+                </div>
+
                 <div class="form-actions">
-                    <button type="submit" class="btn-submit">Submit Report</button>
-                    <button type="button" class="btn-secondary" onclick="closeCreateReportModal()">Cancel</button>
+                    <button type="button" class="btn-cancel" onclick="closeReportModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-submit">
+                        Submit Report
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Report Details Modal -->
-    <div class="modal" id="reportDetailsModal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeReportDetailsModal()">&times;</span>
-            <h2 class="modal-title">Report Details</h2>
-            <div class="report-details" id="reportDetails">
-                <div class="loading-spinner"></div>
-            </div>
-        </div>
-    </div>
-
     <div class="particle-system"></div>
 
+    <!-- JavaScript -->
     <script src="js/main.js"></script>
-    <script src="js/reports.js"></script>
     <script src="js/animations.js"></script>
+    <script>
+        // Global variables
+        let currentTab = 'all';
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allVulnerabilities = [];
+        let selectedVulnerability = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Update navigation
+            if (typeof updateNavigation === 'function') {
+                await updateNavigation();
+            }
+
+            // Check authentication
+            const user = await checkAuth();
+            if (!user) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Load data
+            await loadVulnerabilities();
+            await loadReports();
+            await loadStats();
+
+            // Setup form handler
+            document.getElementById('reportForm').addEventListener('submit', handleReportSubmit);
+        });
+
+        // Load vulnerabilities for dropdown
+        async function loadVulnerabilities() {
+            try {
+                const response = await fetch(`${API_URL}/vulnerabilities?status=open&limit=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allVulnerabilities = data.vulnerabilities || [];
+                    populateVulnerabilityDropdown();
+                }
+            } catch (error) {
+                console.error('Error loading vulnerabilities:', error);
+            }
+        }
+
+        // Populate vulnerability dropdown
+        function populateVulnerabilityDropdown() {
+            const select = document.getElementById('vulnerabilitySelect');
+            select.innerHTML = '<option value="">-- Select a vulnerability to report on --</option>';
+            
+            allVulnerabilities.forEach(vuln => {
+                const option = document.createElement('option');
+                option.value = vuln.id;
+                option.textContent = `#${vuln.id} - ${vuln.title} (${vuln.severity.toUpperCase()})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Update vulnerability info when selected
+        function updateVulnerabilityInfo() {
+            const select = document.getElementById('vulnerabilitySelect');
+            const infoDiv = document.getElementById('vulnerabilityInfo');
+            const detailsDiv = document.getElementById('vulnDetails');
+            
+            if (select.value) {
+                selectedVulnerability = allVulnerabilities.find(v => v.id == select.value);
+                if (selectedVulnerability) {
+                    detailsDiv.innerHTML = `
+                        <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">${escapeHtml(selectedVulnerability.title)}</h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            <strong>Severity:</strong> ${selectedVulnerability.severity.toUpperCase()} | 
+                            <strong>EXP Reward:</strong> ${selectedVulnerability.exp_reward}
+                        </p>
+                        <p style="color: var(--text-primary);">${escapeHtml(selectedVulnerability.description)}</p>
+                        ${selectedVulnerability.reporter_name ? 
+                            `<p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                                <strong>Reported by:</strong> ${escapeHtml(selectedVulnerability.reporter_name)}
+                            </p>` : ''}
+                    `;
+                    infoDiv.classList.add('show');
+                }
+            } else {
+                infoDiv.classList.remove('show');
+                selectedVulnerability = null;
+            }
+        }
+
+        // Load reports
+        async function loadReports() {
+            const reportsList = document.getElementById('reportsList');
+            reportsList.innerHTML = '<div class="loading-spinner"></div>';
+
+            try {
+                let url = `${API_URL}/reports?page=${currentPage}&limit=${itemsPerPage}`;
+                
+                // Add filters based on current tab
+                if (currentTab === 'my-reports') {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    url = `${API_URL}/reports/user/${user.id}?page=${currentPage}&limit=${itemsPerPage}`;
+                } else if (currentTab !== 'all') {
+                    const statusMap = {
+                        'open': 0,
+                        'in-progress': 1,
+                        'resolved': 2
+                    };
+                    if (statusMap[currentTab] !== undefined) {
+                        url += `&status=${statusMap[currentTab]}`;
+                    }
+                }
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayReports(data.reports || []);
+                    displayPagination(data.pagination || {});
+                } else {
+                    throw new Error('Failed to load reports');
+                }
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                reportsList.innerHTML = '<div class="error">Failed to load reports. Please try again.</div>';
+            }
+        }
+
+        // Display reports
+        function displayReports(reports) {
+            const reportsList = document.getElementById('reportsList');
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+            if (!reports || reports.length === 0) {
+                reportsList.innerHTML = '<div class="no-data">No reports found. Be the first to submit a vulnerability report!</div>';
+                return;
+            }
+
+            reportsList.innerHTML = reports.map(report => {
+                const isOwner = currentUser.id === report.user_id;
+                const canResolve = currentUser.id === report.vulnerability_reporter_id;
+                const statusText = getStatusText(report.status);
+                const statusClass = getStatusClass(report.status);
+
+                return `
+                    <div class="report-card">
+                        <div class="report-header">
+                            <div class="report-info">
+                                <h3 class="report-title">Report #${report.id}</h3>
+                                <div class="report-vulnerability">
+                                    Vulnerability: <a href="/vulnerabilities.html#${report.vulnerability_id}">
+                                        ${escapeHtml(report.vulnerability_title || 'Unknown')}
+                                    </a>
+                                </div>
+                                <div class="report-reporter">
+                                    Reported by: ${escapeHtml(report.username || 'Anonymous')}
+                                </div>
+                            </div>
+                            <div class="report-meta">
+                                <span class="report-status ${statusClass}">${statusText}</span>
+                                <span class="report-exp">+${report.vulnerability_points || 0} EXP</span>
+                                <span class="report-date">${formatDate(report.created_at)}</span>
+                            </div>
+                        </div>
+                        <div class="report-content">
+                            <div class="report-description">
+                                ${escapeHtml(report.findings || 'No findings provided').substring(0, 200)}${report.findings && report.findings.length > 200 ? '...' : ''}
+                            </div>
+                            <div class="report-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Severity</span>
+                                    <span class="detail-value">${report.vulnerability_severity ? report.vulnerability_severity.toUpperCase() : 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Reporter Reputation</span>
+                                    <span class="detail-value">${report.user_reputation || 0}</span>
+                                </div>
+                                ${report.updated_at !== report.created_at ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Last Updated</span>
+                                        <span class="detail-value">${formatDate(report.updated_at)}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="report-actions">
+                            <button class="btn-action" onclick="viewReportDetails(${report.id})">View Details</button>
+                            ${isOwner && report.status === 0 ? `
+                                <button class="btn-action" onclick="updateReportStatus(${report.id}, 1)">Mark In Progress</button>
+                            ` : ''}
+                            ${canResolve && report.status !== 2 ? `
+                                <button class="btn-action btn-resolve" onclick="resolveReport(${report.id})">Resolve</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                
+                // Get all reports for stats
+                const response = await fetch(`${API_URL}/reports?limit=1000`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const reports = data.reports || [];
+                    
+                    // Calculate stats
+                    const totalReports = reports.length;
+                    const openReports = reports.filter(r => r.status === 0).length;
+                    const resolvedReports = reports.filter(r => r.status === 2).length;
+                    const userReports = reports.filter(r => r.user_id === user.id).length;
+
+                    // Update display
+                    document.getElementById('totalReports').textContent = totalReports;
+                    document.getElementById('openReports').textContent = openReports;
+                    document.getElementById('resolvedReports').textContent = resolvedReports;
+                    document.getElementById('userReports').textContent = userReports;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Handle report submission
+        async function handleReportSubmit(e) {
+            e.preventDefault();
+
+            const vulnerabilityId = document.getElementById('vulnerabilitySelect').value;
+            const findings = document.getElementById('reportFindings').value;
+            const severity = document.getElementById('severityAssessment').value;
+            const notes = document.getElementById('additionalNotes').value;
+
+            if (!vulnerabilityId || !findings || !severity) {
+                showNotification('Please fill in all required fields', 'error');
+                return;
+            }
+
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const token = localStorage.getItem('token');
+
+            try {
+                // Create the report
+                const reportData = {
+                    user_id: user.id,
+                    vulnerability_id: parseInt(vulnerabilityId),
+                    findings: findings,
+                    severity_assessment: severity,
+                    additional_notes: notes
+                };
+
+                const response = await fetch(`${API_URL}/reports`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(reportData)
+                });
+
+                if (response.ok) {
+                    showNotification('Report submitted successfully! You earned EXP points.', 'success');
+                    closeReportModal();
+                    await loadReports();
+                    await loadStats();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to submit report');
+                }
+            } catch (error) {
+                console.error('Error submitting report:', error);
+                showNotification(error.message || 'Error submitting report', 'error');
+            }
+        }
+
+        // View report details
+        async function viewReportDetails(reportId) {
+            try {
+                const response = await fetch(`${API_URL}/reports/${reportId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // You can show details in a modal or navigate to a details page
+                    console.log('Report details:', data.report);
+                    showNotification('Report details loaded (check console)', 'info');
+                }
+            } catch (error) {
+                console.error('Error loading report details:', error);
+                showNotification('Error loading report details', 'error');
+            }
+        }
+
+        // Update report status
+        async function updateReportStatus(reportId, newStatus) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${API_URL}/reports/${reportId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: newStatus,
+                        user_id: user.id
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Report status updated successfully', 'success');
+                    await loadReports();
+                    await loadStats();
+                } else {
+                    throw new Error('Failed to update report status');
+                }
+            } catch (error) {
+                console.error('Error updating report:', error);
+                showNotification('Error updating report status', 'error');
+            }
+        }
+
+        // Resolve report
+        async function resolveReport(reportId) {
+            if (!confirm('Are you sure you want to mark this report as resolved?')) {
+                return;
+            }
+
+            await updateReportStatus(reportId, 2);
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            currentPage = 1;
+
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(tab.replace('-', ' '))) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Reload reports
+            loadReports();
+        }
+
+        // Pagination
+        function displayPagination(pagination) {
+            const paginationDiv = document.getElementById('pagination');
+            
+            if (!pagination || pagination.totalPages <= 1) {
+                paginationDiv.innerHTML = '';
+                return;
+            }
+
+            let html = '<div class="pagination-controls">';
+            
+            if (pagination.page > 1) {
+                html += `<button class="page-btn" onclick="changePage(${pagination.page - 1})">Previous</button>`;
+            }
+
+            const startPage = Math.max(1, pagination.page - 2);
+            const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
+                if (startPage > 2) html += '<span>...</span>';
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === pagination.page) {
+                    html += `<span class="page-current">${i}</span>`;
+                } else {
+                    html += `<button class="page-btn" onclick="changePage(${i})">${i}</button>`;
+                }
+            }
+
+            if (endPage < pagination.totalPages) {
+                if (endPage < pagination.totalPages - 1) html += '<span>...</span>';
+                html += `<button class="page-btn" onclick="changePage(${pagination.totalPages})">${pagination.totalPages}</button>`;
+            }
+
+            if (pagination.page < pagination.totalPages) {
+                html += `<button class="page-btn" onclick="changePage(${pagination.page + 1})">Next</button>`;
+            }
+
+            html += '</div>';
+            paginationDiv.innerHTML = html;
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            loadReports();
+        }
+
+        // Modal functions
+        function openReportModal() {
+            document.getElementById('reportModal').style.display = 'block';
+            document.getElementById('reportForm').reset();
+            document.getElementById('vulnerabilityInfo').classList.remove('show');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').style.display = 'none';
+        }
+
+        // Helper functions
+        function getStatusText(status) {
+            const statusMap = {
+                0: 'Open',
+                1: 'In Progress',
+                2: 'Resolved',
+                3: 'Closed'
+            };
+            return statusMap[status] || 'Unknown';
+        }
+
+        function getStatusClass(status) {
+            const classMap = {
+                0: 'status-open',
+                1: 'status-in_progress',
+                2: 'status-resolved',
+                3: 'status-closed'
+            };
+            return classMap[status] || '';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification show';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                background: ${type === 'success' ? 'rgba(76, 175, 80, 0.9)' : type === 'error' ? 'rgba(244, 67, 54, 0.9)' : 'rgba(0, 212, 255, 0.9)'};
+                color: white;
+                border-radius: 8px;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('reportModal');
+            if (event.target === modal) {
+                closeReportModal();
+            }
+        }
+    </script>
 </body>
 </html>
