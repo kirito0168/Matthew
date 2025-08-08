@@ -15,6 +15,7 @@ const getOverallRankings = (req, res) => {
 
     const offset = (validation.page - 1) * validation.limit;
 
+    // Get rankings
     RankingModel.getOverallRankings(validation.limit, offset, (error, rankings) => {
         if (error) {
             console.error('Get overall rankings error:', error);
@@ -24,13 +25,30 @@ const getOverallRankings = (req, res) => {
             });
         }
 
-        res.json({
-            success: true,
-            rankings,
-            pagination: {
-                page: validation.page,
-                limit: validation.limit
+        // Get total count for pagination
+        RankingModel.getTotalUsersCount((countError, countResult) => {
+            if (countError) {
+                console.error('Get total users count error:', countError);
             }
+
+            const totalCount = countResult && countResult.length > 0 ? countResult[0].total : 0;
+
+            // Add rank numbers to rankings
+            const rankedData = rankings.map((user, index) => ({
+                ...user,
+                rank: offset + index + 1
+            }));
+
+            res.json({
+                success: true,
+                rankings: rankedData,
+                pagination: {
+                    page: validation.page,
+                    limit: validation.limit,
+                    total: totalCount,
+                    totalPages: Math.ceil(totalCount / validation.limit)
+                }
+            });
         });
     });
 };
@@ -77,10 +95,16 @@ const getCategoryRankings = (req, res) => {
 
             const totalCount = countResult && countResult.length > 0 ? countResult[0].total : 0;
 
+            // Add rank numbers to rankings
+            const rankedData = rankings.map((user, index) => ({
+                ...user,
+                rank: offset + index + 1
+            }));
+
             res.json({
                 success: true,
                 category,
-                rankings,
+                rankings: rankedData,
                 pagination: {
                     page: validation.page,
                     limit: validation.limit,

@@ -64,13 +64,27 @@ const validateRequired = (fields) => {
 
 // Validate pagination parameters
 const validatePagination = (page, limit) => {
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
-    
-    return {
-        page: Math.max(1, pageNum),
-        limit: Math.min(100, Math.max(1, limitNum))
-    };
+  // Parse safely with defaults
+  const p = parseInt(page, 10);
+  const l = parseInt(limit, 10);
+
+  const pageNum  = Number.isFinite(p) && p > 0 ? p : 1;
+  const limitNum = Number.isFinite(l) && l > 0 ? l : 10;
+
+  // Simple abuse caps (tune if you like)
+  if (pageNum > 100000) {
+    return { isValid: false, message: 'Page too large' };
+  }
+  if (limitNum > 100) {
+    return { isValid: false, message: 'Limit too large (max 100)' };
+  }
+
+  return {
+    isValid: true,
+    page: pageNum,
+    limit: limitNum,
+    offset: (pageNum - 1) * limitNum,
+  };
 };
 
 module.exports = {

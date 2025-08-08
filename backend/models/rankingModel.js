@@ -26,6 +26,12 @@ class RankingModel {
         db.query(query, [limit, offset], callback);
     }
 
+    // Get total users count for pagination
+    static getTotalUsersCount(callback) {
+        const query = 'SELECT COUNT(*) as total FROM users';
+        db.query(query, callback);
+    }
+
     // Get rankings by category
     static getCategoryRankings(category, limit, offset, callback) {
         let query = '';
@@ -91,38 +97,13 @@ class RankingModel {
                 break;
 
             default:
-                return callback(new Error('Invalid category'));
+                return callback(new Error('Invalid category'), null);
         }
 
         db.query(query, params, callback);
     }
 
-    // Get user's rank
-    static getUserRank(userId, callback) {
-        const query = `
-            SELECT 
-                user_rank,
-                total_users
-            FROM (
-                SELECT 
-                    id,
-                    @rank := @rank + 1 as user_rank,
-                    (SELECT COUNT(*) FROM users) as total_users
-                FROM (
-                    SELECT 
-                        u.id,
-                        (u.level * 1000 + u.exp) as total_exp
-                    FROM users u
-                    ORDER BY total_exp DESC
-                ) ranked
-                CROSS JOIN (SELECT @rank := 0) r
-            ) user_rankings
-            WHERE id = ?
-        `;
-        db.query(query, [userId], callback);
-    }
-
-    // Get category count
+    // Get category count for pagination
     static getCategoryCount(category, callback) {
         let query = '';
 
@@ -138,18 +119,44 @@ class RankingModel {
                 break;
 
             case 'quests':
-                query = 'SELECT COUNT(DISTINCT user_id) as total FROM user_quests';
+                query = `
+                    SELECT COUNT(DISTINCT u.id) as total
+                    FROM users u
+                    INNER JOIN user_quests uq ON u.id = uq.user_id
+                `;
                 break;
 
             case 'achievements':
-                query = 'SELECT COUNT(DISTINCT user_id) as total FROM user_achievements';
+                query = `
+                    SELECT COUNT(DISTINCT u.id) as total
+                    FROM users u
+                    INNER JOIN user_achievements ua ON u.id = ua.user_id
+                `;
                 break;
 
             default:
-                query = 'SELECT COUNT(*) as total FROM users';
+                return callback(new Error('Invalid category'), null);
         }
 
         db.query(query, callback);
+    }
+
+    // Get user's rank in overall rankings
+    static getUserRank(userId, callback) {
+        const query = `
+            SELECT 
+                rank_table.user_rank,
+                total_users.total as total_users
+            FROM (
+                SELECT 
+                    u.id,
+                    ROW_NUMBER() OVER (ORDER BY (u.level * 1000 + u.exp) DESC) as user_rank
+                FROM users u
+            ) rank_table,
+            (SELECT COUNT(*) as total FROM users) total_users
+            WHERE rank_table.id = ?
+        `;
+        db.query(query, [userId], callback);
     }
 }
 
