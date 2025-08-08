@@ -214,10 +214,63 @@ const checkAchievements = (userId, type, value) => {
     });
 };
 
+// Get system statistics - GET /api/users/stats
+const getSystemStats = (req, res) => {
+    console.log('Getting system statistics...');
+
+    const pool = require('../services/db');
+
+    // Count total users
+    pool.query('SELECT COUNT(*) as count FROM users', (error, userResult) => {
+        const totalUsers = error ? 0 : userResult[0].count;
+
+        // Count total vulnerabilities
+        pool.query('SELECT COUNT(*) as count FROM vulnerabilities', (error, vulnResult) => {
+            const totalVulnerabilities = error ? 0 : vulnResult[0].count;
+
+            // Count total reports
+            pool.query('SELECT COUNT(*) as count FROM reports WHERE status != -1', (error, reportResult) => {
+                const totalReports = error ? 0 : reportResult[0].count;
+
+                // Count total quests
+                pool.query('SELECT COUNT(*) as count FROM quests', (error, questResult) => {
+                    const totalQuests = error ? 0 : questResult[0].count;
+
+                    // Count active hunters (users who have made reports)
+                    pool.query('SELECT COUNT(DISTINCT user_id) as count FROM reports WHERE status != -1', (error, activeResult) => {
+                        const activeHunters = error ? 0 : activeResult[0].count;
+
+                        // Calculate total rewards (sum of all user points)
+                        pool.query('SELECT SUM(points) as total FROM users', (error, rewardResult) => {
+                            const totalRewards = error ? 0 : (rewardResult[0].total || 0);
+
+                            const stats = {
+                                totalUsers: totalUsers,
+                                totalReports: totalReports,
+                                totalRewards: totalRewards,
+                                activeHunters: activeHunters,
+                                totalVulnerabilities: totalVulnerabilities,
+                                totalQuests: totalQuests
+                            };
+
+                            console.log('System stats collected:', stats);
+                            res.json({
+                                success: true,
+                                stats: stats
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+};
+
 module.exports = {
     getProfile,
     updateTitle,
     getUnlockedTitles,
     addExperience,
-    checkAchievements
+    checkAchievements,
+    getSystemStats
 };

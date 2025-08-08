@@ -33,12 +33,6 @@ async function updateNavigation() {
     const user = await checkAuth();
     const navAuth = document.querySelector('.nav-auth');
     
-    // Check if nav-auth element exists before trying to modify it
-    if (!navAuth) {
-        console.log('No .nav-auth element found, skipping navigation update');
-        return;
-    }
-    
     if (user) {
         // Clear existing content
         navAuth.innerHTML = '';
@@ -67,62 +61,38 @@ async function updateNavigation() {
         
         // Add click event to toggle dropdown on mobile
         const userInfo = userMenu.querySelector('.user-info');
-        userInfo.addEventListener('click', (e) => {
-            e.stopPropagation();
+        userInfo.addEventListener('click', () => {
             userMenu.classList.toggle('active');
         });
-        
-        // Add quest link to main menu if it doesn't exist
-        const navMenu = document.querySelector('.nav-menu');
-        if (navMenu) {
-            const existingQuestLink = Array.from(navMenu.children).find(li => 
-                li.querySelector('a[href="/quests.html"]')
-            );
-            
-            if (!existingQuestLink) {
-                const questLi = document.createElement('li');
-                questLi.innerHTML = '<a href="/quests.html" class="nav-link">Quests</a>';
-                navMenu.insertBefore(questLi, navAuth);
-            }
-        }
-        
-        // Update hero actions for logged-in users
-        updateHeroActions(true);
     } else {
-        // Show login/register buttons for non-authenticated users
+        // Not logged in - show login/register links
         navAuth.innerHTML = `
-            <a href="/login.html" class="btn-login">Login</a>
-            <a href="/register.html" class="btn-register">Register</a>
-        `;
-        
-        // Update hero actions for non-logged-in users
-        updateHeroActions(false);
-    }
-}
-
-// Update hero actions based on auth status
-function updateHeroActions(isLoggedIn) {
-    const heroActions = document.getElementById('heroActions');
-    if (!heroActions) return;
-    
-    if (isLoggedIn) {
-        heroActions.innerHTML = `
-            <a href="/dashboard.html" class="btn-primary">Go to Dashboard</a>
-            <a href="/quests.html" class="btn-secondary">Start Quests</a>
-        `;
-    } else {
-        heroActions.innerHTML = `
-            <a href="/register.html" class="btn-primary">Start Your Adventure</a>
-            <a href="/ranking.html" class="btn-secondary">View Rankings</a>
+            <a href="/login.html" class="nav-link">Login</a>
+            <a href="/register.html" class="nav-link">Register</a>
         `;
     }
 }
 
 // Logout function
-function logout() {
+async function logout() {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+        try {
+            await fetch(`${API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+    
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     showNotification('Logged out successfully', 'success');
+    
     setTimeout(() => {
         window.location.href = '/';
     }, 1000);
@@ -130,90 +100,118 @@ function logout() {
 
 // Show notification
 function showNotification(message, type = 'info') {
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => notification.remove());
-
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
+    // Remove existing notification
+    const existing = document.querySelector('.notification');
+    if (existing) {
+        existing.remove();
+    }
     
-    // Set notification styles
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        color: white;
-        z-index: 10000;
-        opacity: 0;
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-        max-width: 400px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        font-weight: 500;
-    `;
-
-    // Set background color based on type
-    const colors = {
-        success: '#4CAF50',
-        error: '#f44336',
-        warning: '#ff9800',
-        info: '#2196F3'
-    };
-    notification.style.background = colors[type] || colors.info;
-
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
     notification.textContent = message;
+    
     document.body.appendChild(notification);
-
-    // Animate in
+    
+    // Auto remove after 3 seconds
     setTimeout(() => {
-        notification.style.opacity = '1';
-        notification.style.transform = 'translateX(0)';
-    }, 100);
-
-    // Remove after 5 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 300);
-    }, 5000);
+        notification.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 // Load homepage stats
-function loadHomeStats() {
-    const statsElements = {
-        totalUsers: document.getElementById('totalUsers'),
-        activeReports: document.getElementById('activeReports'),
-        resolvedVulns: document.getElementById('resolvedVulns'),
-        totalRewards: document.getElementById('totalRewards')
-    };
-
-    // Animate counter if elements exist
-    Object.entries(statsElements).forEach(([key, element]) => {
-        if (element) {
-            const targetValue = parseInt(element.textContent) || 0;
-            animateCounter(element, targetValue);
+async function loadHomeStats() {
+    // Check if we're on the homepage by looking for the stats elements
+    const totalPlayersElement = document.getElementById('totalPlayers');
+    const totalBugsElement = document.getElementById('totalBugs');
+    const totalQuestsElement = document.getElementById('totalQuests');
+    
+    if (!totalPlayersElement || !totalBugsElement || !totalQuestsElement) {
+        console.log('Stats elements not found - not on homepage');
+        return;
+    }
+    
+    try {
+        console.log('Loading homepage stats...');
+        const response = await fetch(`${API_URL}/users/stats`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Stats data received:', data);
+            
+            if (data.success && data.stats) {
+                const stats = data.stats;
+                
+                // Update stats with animation
+                updateStatWithAnimation(totalPlayersElement, stats.activeHunters || stats.totalUsers || 0);
+                updateStatWithAnimation(totalBugsElement, stats.totalReports || stats.totalVulnerabilities || 0);
+                updateStatWithAnimation(totalQuestsElement, stats.totalQuests || 0);
+            } else {
+                console.error('Stats API returned error:', data.message);
+                // Set default values
+                totalPlayersElement.textContent = '0';
+                totalBugsElement.textContent = '0';
+                totalQuestsElement.textContent = '0';
+            }
+        } else {
+            console.error('Stats API request failed:', response.status);
+            // Set default values
+            totalPlayersElement.textContent = '0';
+            totalBugsElement.textContent = '0';
+            totalQuestsElement.textContent = '0';
         }
-    });
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        // Set default values if API fails
+        totalPlayersElement.textContent = '0';
+        totalBugsElement.textContent = '0';
+        totalQuestsElement.textContent = '0';
+    }
 }
 
-// Animate counter function
-function animateCounter(element, target) {
-    let current = 0;
-    const increment = target / 50;
+// Animate stat numbers (updated to work with elements directly)
+function updateStatWithAnimation(element, targetValue) {
+    if (!element) return;
+    
+    const startValue = 0;
+    const duration = 2000; // 2 seconds
+    const startTime = performance.now();
+    
+    function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function (ease-out)
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(startValue + (targetValue - startValue) * easeOut);
+        
+        element.textContent = current.toLocaleString();
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            element.textContent = targetValue.toLocaleString();
+        }
+    }
+    
+    requestAnimationFrame(animate);
+}
+
+// Alternative simpler animation
+function animateValue(element, start, end, duration) {
+    const range = end - start;
+    const increment = range / (duration / 30);
+    let current = start;
+    
     const timer = setInterval(() => {
         current += increment;
-        if (current >= target) {
-            current = target;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+            current = end;
             clearInterval(timer);
         }
-        element.textContent = Math.floor(current);
+        if (element) {
+            element.textContent = Math.floor(current);
+        }
     }, 30);
 }
 
@@ -275,6 +273,29 @@ function setActiveNavLink() {
     });
 }
 
+// Escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Generate star rating display
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+            stars += '<span class="star filled">★</span>';
+        } else {
+            stars += '<span class="star">☆</span>';
+        }
+    }
+    return stars;
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing main.js...');
@@ -330,27 +351,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('Main.js initialization complete');
 });
-
-function escapeHtml(unsafe) {
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-function generateStars(rating) {
-    let stars = '';
-    for (let i = 1; i <= 5; i++) {
-        if (i <= rating) {
-            stars += '<span class="star filled">★</span>';
-        } else {
-            stars += '<span class="star">☆</span>';
-        }
-    }
-    return stars;
-}
 
 // Export functions for use in other scripts
 window.checkAuth = checkAuth;
