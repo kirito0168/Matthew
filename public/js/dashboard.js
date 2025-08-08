@@ -152,33 +152,17 @@ function formatActivityDetails(type, details) {
         case 'level_up':
             return `Reached Level ${details.newLevel || '?'}!`;
         case 'review_posted':
-            return `Reviewed: ${details.title || 'Unknown'} (${details.rating || 0} stars)`;
+            return `Reviewed: ${details.title || 'Unknown'}`;
         default:
-            return 'Activity completed';
+            return '';
     }
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString();
 }
 
 async function loadAchievementProgress() {
     const achievementList = document.getElementById('achievementList');
     
     try {
-        const response = await fetch(`${API_URL}/achievements/progress`, {
+        const response = await fetch(`${API_URL}/users/profile`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
@@ -186,21 +170,66 @@ async function loadAchievementProgress() {
 
         if (response.ok) {
             const data = await response.json();
-            const progress = data.progress;
+            const profile = data.profile;
+            
+            // Initialize achievement data structure if not present
+            const achievements = profile.achievements || [];
+            const achievementProgress = profile.achievementProgress || {};
+            
+            // Define achievement info
+            const achievementInfo = {
+                vulnerabilities_reported: {
+                    name: 'Bug Hunter',
+                    current: profile.vulnerabilities_reported || 0,
+                    levels: [1, 10, 50, 100, 500]
+                },
+                vulnerabilities_resolved: {
+                    name: 'Bug Slayer',
+                    current: profile.vulnerabilities_resolved || 0,
+                    levels: [1, 5, 25, 50, 100]
+                },
+                quests_completed: {
+                    name: 'Quest Master',
+                    current: profile.quests_completed || 0,
+                    levels: [1, 10, 25, 50, 100]
+                },
+                level_reached: {
+                    name: 'Level Master',
+                    current: profile.level || 1,
+                    levels: [10, 25, 50, 75, 100]
+                },
+                reviews_given: {
+                    name: 'Reviewer',
+                    current: profile.reviews_given || 0,
+                    levels: [1, 10, 25, 50, 100]
+                }
+            };
 
-            const achievementHTML = Object.entries(progress).map(([type, info]) => {
-                const nextAchievement = info.achievements.find(a => !a.is_unlocked);
-                if (!nextAchievement) return '';
+            // Filter out already completed achievements and find next level
+            const achievementHTML = Object.entries(achievementInfo).map(([type, info]) => {
+                // Check if achievements array exists and has items
+                const completedLevels = achievements && Array.isArray(achievements) 
+                    ? achievements
+                        .filter(a => a && a.type === type)
+                        .map(a => a.requirement_value || 0)
+                    : [];
+
+                // Find next achievement level
+                const nextLevel = info.levels.find(level => !completedLevels.includes(level) && info.current < level);
+
+                if (!nextLevel) return '';
+
+                const progress = Math.min(100, (info.current / nextLevel) * 100);
 
                 return `
                     <div class="achievement-item">
                         <div class="achievement-icon">${getAchievementIcon(type)}</div>
                         <div class="achievement-info">
-                            <div class="achievement-name">${nextAchievement.name}</div>
+                            <div class="achievement-name">${info.name}</div>
                             <div class="achievement-progress-bar">
-                                <div class="achievement-progress-fill" style="width: ${nextAchievement.progress}%"></div>
+                                <div class="achievement-progress-fill" style="width: ${progress}%"></div>
                             </div>
-                            <div class="achievement-details">${info.current} / ${nextAchievement.requirement_value}</div>
+                            <div class="achievement-details">${info.current} / ${nextLevel}</div>
                         </div>
                     </div>
                 `;
@@ -296,3 +325,19 @@ function animateNumbers() {
     });
 }
 
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        return 'Today';
+    } else if (diffDays === 1) {
+        return 'Yesterday';
+    } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}

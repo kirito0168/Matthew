@@ -1,60 +1,73 @@
-// Vulnerabilities page functionality - Complete with Reports Display and Resolution
+// vulnerabilities.js - Fixed version with all utility functions
+
+// Global variables
 let currentPage = 1;
+let currentLimit = 10;
 let currentTab = 'all';
 
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
     loadVulnerabilities();
     setupEventListeners();
 });
 
+function checkAuth() {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (!token || !user) {
+        window.location.href = '/login.html';
+        return;
+    }
+}
+
 function setupEventListeners() {
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTab = btn.dataset.tab;
+            currentPage = 1;
+            loadVulnerabilities();
+        });
+    });
+
+    // Modal close events
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeReportModal();
+            closeDetailsModal();
+        }
+    });
+
+    // Report form submission
     const reportForm = document.getElementById('reportForm');
     if (reportForm) {
         reportForm.addEventListener('submit', handleReportSubmit);
     }
-
-    // Close modal on outside click
-    window.onclick = function(event) {
-        const reportModal = document.getElementById('reportModal');
-        const detailsModal = document.getElementById('detailsModal');
-        if (event.target === reportModal) {
-            closeReportModal();
-        }
-        if (event.target === detailsModal) {
-            closeDetailsModal();
-        }
-    }
 }
 
+// Load vulnerabilities
 async function loadVulnerabilities() {
-    // Changed from 'vulnerabilitiesList' to 'vulnerabilitiesGrid' to match HTML
     const gridDiv = document.getElementById('vulnerabilitiesGrid');
-    
-    if (!gridDiv) {
-        console.error('Vulnerabilities grid element not found');
-        return;
-    }
-    
-    gridDiv.innerHTML = '<div class="loading-spinner"></div>';
+    if (!gridDiv) return;
+
+    gridDiv.innerHTML = '<div class="loading">Loading vulnerabilities...</div>';
 
     try {
-        let url = `${API_URL}/vulnerabilities?page=${currentPage}&limit=10`;
+        let url = `${API_URL}/vulnerabilities?page=${currentPage}&limit=${currentLimit}`;
         
-        // Add filters
-        const severityFilter = document.getElementById('severityFilter')?.value;
-        const statusFilter = document.getElementById('statusFilter')?.value;
-        const sortFilter = document.getElementById('sortFilter')?.value;
-        
-        if (severityFilter) url += `&severity=${severityFilter}`;
-        if (statusFilter) url += `&status=${statusFilter}`;
-        if (sortFilter) url += `&sort=${sortFilter}`;
-
-        // Add tab filter
-        if (currentTab === 'my-reports' || currentTab === 'my-resolved') {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                gridDiv.innerHTML = '<div class="empty-state"><h3>Authentication Required</h3><p>Please login to view your reports</p></div>';
+        if (currentTab !== 'all') {
+            if (currentTab === 'mine') {
+                url += '&mine=true';
+            } else if (currentTab === 'resolved') {
+                url += '&status=resolved';
+            } else if (currentTab === 'open') {
+                url += '&status=open';
+            } else {
                 return;
             }
             url += `&tab=${currentTab}`;
@@ -198,12 +211,13 @@ async function resolveVulnerability(id) {
     }
 
     try {
-        const response = await fetch(`${API_URL}/vulnerabilities/${id}/resolve`, {
-            method: 'POST',
+        const response = await fetch(`${API_URL}/vulnerabilities/${id}/status`, {
+            method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ status: 'resolved' })
         });
 
         const data = await response.json();
@@ -290,6 +304,8 @@ function formatStatus(status) {
 }
 
 function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now - date);
@@ -362,41 +378,27 @@ function showNotification(message, type = 'info') {
                 padding: 1rem 1.5rem;
                 background: rgba(0, 0, 0, 0.9);
                 border-radius: 8px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                color: white;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                border-left: 4px solid var(--accent-color);
             }
             
             .notification-success .notification-content {
-                border: 1px solid #4CAF50;
-                background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(0, 0, 0, 0.9));
+                border-left-color: #10b981;
             }
             
             .notification-error .notification-content {
-                border: 1px solid #F44336;
-                background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(0, 0, 0, 0.9));
-            }
-            
-            .notification-info .notification-content {
-                border: 1px solid var(--primary-color);
-                background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 0, 0, 0.9));
-            }
-            
-            .notification-message {
-                color: white;
-                font-size: 1rem;
+                border-left-color: #ef4444;
             }
             
             .notification-close {
                 background: none;
                 border: none;
                 color: white;
-                font-size: 1.5rem;
+                font-size: 1.2rem;
                 cursor: pointer;
                 padding: 0;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                margin-left: auto;
             }
             
             @keyframes slideIn {
@@ -409,54 +411,42 @@ function showNotification(message, type = 'info') {
                     opacity: 1;
                 }
             }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
         `;
         document.head.appendChild(styles);
     }
     
-    // Add to document
+    // Add to page
     document.body.appendChild(notification);
-    
-    // Close button functionality
-    notification.querySelector('.notification-close').onclick = () => {
-        notification.remove();
-    };
     
     // Auto remove after 5 seconds
     setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
-}
-
-// Check authentication
-async function checkAuth() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        return null;
-    }
-    
-    try {
-        const response = await fetch(`${API_URL}/auth/verify`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
             }
-        });
-        
-        if (!response.ok) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            return null;
-        }
-        
-        return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch (error) {
-        console.error('Auth check error:', error);
-        return null;
-    }
-}
-
-// Initialize API_URL if not defined
-if (typeof API_URL === 'undefined') {
-    window.API_URL = '/api';
+        }, 300);
+    }, 5000);
+    
+    // Manual close
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    });
 }
