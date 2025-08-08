@@ -63,28 +63,33 @@ const getAchievementProgress = (req, res) => {
                 let currentValue = 0;
                 let progressPercentage = 0;
 
-                switch (achievement.requirement_type) {
-                    case 'vulnerabilities_reported':
+                // Map requirement_type based on your schema (using 'title' field)
+                const requirementType = achievement.requirement_type;
+                
+                switch (requirementType) {
+                    case 'vulnerabilities':
                         currentValue = progress.vulnerabilities_reported || 0;
+                        if (achievement.title && achievement.title.includes('resolved')) {
+                            currentValue = progress.vulnerabilities_resolved || 0;
+                        }
                         break;
-                    case 'vulnerabilities_resolved':
-                        currentValue = progress.vulnerabilities_resolved || 0;
-                        break;
-                    case 'quests_completed':
+                    case 'quests':
                         currentValue = progress.quests_completed || 0;
                         break;
-                    case 'level_reached':
+                    case 'level':
                         currentValue = progress.level_reached || 1;
                         break;
-                    case 'reviews_given':
+                    case 'special':
                         currentValue = progress.reviews_given || 0;
                         break;
+                    default:
+                        currentValue = 0;
                 }
 
                 if (achievement.unlocked_at) {
                     progressPercentage = 100;
                 } else {
-                    progressPercentage = Math.min(100, (currentValue / achievement.requirement_value) * 100);
+                    progressPercentage = Math.min(100, (currentValue / (achievement.requirement_value || 1)) * 100);
                 }
 
                 return {

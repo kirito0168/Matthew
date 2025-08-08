@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../services/db');
 
 class QuestModel {
     // Get all quests with user completion status

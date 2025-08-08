@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../services/db');
 
 class ReviewModel {
     // Create new review

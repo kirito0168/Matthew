@@ -79,11 +79,11 @@ const createReport = (req, res) => {
                     });
                 }
 
-                // Create the report
+                // Create the report (status is INT in your schema, not ENUM)
                 ReportModel.create({
                     userId: user_id,
                     vulnerabilityId: vulnerability_id,
-                    status: 'pending',
+                    status: 0,  // 0 for pending (since it's INT in your schema)
                     points: points
                 }, (createError, result) => {
                     if (createError) {
@@ -119,7 +119,7 @@ const createReport = (req, res) => {
                             id: result.insertId,
                             user_id: user_id,
                             vulnerability_id: vulnerability_id,
-                            status: 'pending',
+                            status: 0,
                             points: points
                         }
                     });
@@ -215,19 +215,18 @@ const updateReport = (req, res) => {
     const { id } = req.params;
     const { status, points } = req.body;
 
-    if (!status) {
+    if (status === undefined) {
         return res.status(400).json({ 
             success: false, 
             message: 'Status is required' 
         });
     }
 
-    // Validate status
-    const validStatuses = ['pending', 'in_progress', 'resolved', 'closed'];
-    if (!validStatuses.includes(status)) {
+    // Since status is INT in your schema, validate it's a number
+    if (!Number.isInteger(status)) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Invalid status. Must be: pending, in_progress, resolved, or closed' 
+            message: 'Status must be an integer' 
         });
     }
 

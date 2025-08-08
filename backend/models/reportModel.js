@@ -1,11 +1,11 @@
-const db = require('../config/database');
+const db = require('../services/db');
 
 class ReportModel {
     // Create new report
     static create(reportData, callback) {
         const { userId, vulnerabilityId, status, points } = reportData;
         const query = 'INSERT INTO reports (user_id, vulnerability_id, status, points) VALUES (?, ?, ?, ?)';
-        db.query(query, [userId, vulnerabilityId, status, points], callback);
+        db.query(query, [userId, vulnerabilityId, status || 0, points || 0], callback);
     }
 
     // Get all reports with pagination
@@ -93,7 +93,7 @@ class ReportModel {
     static update(reportId, updateData, callback) {
         const { status, points } = updateData;
         const query = 'UPDATE reports SET status = ?, points = ?, updated_at = NOW() WHERE id = ?';
-        db.query(query, [status, points, reportId], callback);
+        db.query(query, [status || 0, points || 0, reportId], callback);
     }
 }
 

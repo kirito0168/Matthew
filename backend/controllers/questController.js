@@ -143,7 +143,7 @@ const attemptQuest = (req, res) => {
                         // Check for quest achievements
                         QuestModel.getUserQuestCount(req.userId, (countError, countResult) => {
                             if (!countError && countResult.length > 0) {
-                                checkAchievements(req.userId, 'quests_completed', countResult[0].total);
+                                checkAchievements(req.userId, 'quests', countResult[0].total);
                             }
                         });
 
@@ -202,8 +202,9 @@ const getUserQuestHistory = (req, res) => {
 
 // Battle simulation function
 function simulateBattle(userLevel, quest, action) {
+    // Use health_points from your schema instead of boss_level
     const userPower = userLevel * 100;
-    const bossPower = quest.boss_level * 80;
+    const bossPower = (quest.health_points || 1000) / 10; // Scale down health points for calculation
     
     let successRate = 0.5;
     let damageMultiplier = 1;

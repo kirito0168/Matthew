@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../services/db');
 
 class AchievementModel {
     // Get all achievements
@@ -48,7 +48,7 @@ class AchievementModel {
         const queries = [
             // Vulnerabilities reported count
             'SELECT COUNT(*) as count FROM vulnerabilities WHERE reporter_id = ?',
-            // Vulnerabilities resolved count
+            // Vulnerabilities resolved count  
             'SELECT COUNT(*) as count FROM vulnerabilities WHERE resolver_id = ? AND status = "resolved"',
             // Quests completed count
             'SELECT COUNT(*) as count FROM user_quests WHERE user_id = ?',

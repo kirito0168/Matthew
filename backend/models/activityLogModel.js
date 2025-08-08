@@ -1,12 +1,13 @@
-const db = require('../config/database');
+const db = require('../services/db');
 
 class ActivityLogModel {
     // Create new activity log
     static create(logData, callback) {
         const { userId, actionType, details } = logData;
         const query = 'INSERT INTO activity_logs (user_id, action_type, details) VALUES (?, ?, ?)';
-        const detailsJson = typeof details === 'object' ? JSON.stringify(details) : details;
-        db.query(query, [userId, actionType, detailsJson], callback);
+        // Convert details to string if it's an object (your table uses TEXT not JSON)
+        const detailsString = typeof details === 'object' ? JSON.stringify(details) : details;
+        db.query(query, [userId, actionType, detailsString], callback);
     }
 
     // Get user's activity logs

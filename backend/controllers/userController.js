@@ -170,7 +170,7 @@ const addExperience = (userId, expAmount, reason) => {
                 });
 
                 // Check for level-based achievements
-                checkAchievements(userId, 'level_reached', newLevel);
+                checkAchievements(userId, 'level', newLevel);
             }
         });
     });
@@ -194,14 +194,14 @@ const checkAchievements = (userId, type, value) => {
                 }
 
                 // Add exp reward
-                addExperience(userId, achievement.exp_reward, `Achievement: ${achievement.name}`);
+                addExperience(userId, achievement.exp_reward, `Achievement: ${achievement.title}`);
 
                 // Log achievement unlock
                 ActivityLogModel.create({
                     userId,
                     actionType: 'achievement_unlocked',
                     details: { 
-                        achievementName: achievement.name,
+                        achievementName: achievement.title,
                         expReward: achievement.exp_reward
                     }
                 }, (logError) => {

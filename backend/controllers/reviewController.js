@@ -62,17 +62,10 @@ const createReview = (req, res) => {
                 });
             }
 
-            // Update user stats
-            UserModel.incrementReviewCount(req.userId, (updateError) => {
-                if (updateError) {
-                    console.error('Update user review count error:', updateError);
-                }
-            });
-
             // Check for review achievements
             ReviewModel.getUserReviewCount(req.userId, (countError, countResult) => {
                 if (!countError && countResult.length > 0) {
-                    checkAchievements(req.userId, 'reviews_given', countResult[0].total);
+                    checkAchievements(req.userId, 'reviews', countResult[0].total);
                 }
             });
 
