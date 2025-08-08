@@ -33,6 +33,12 @@ async function updateNavigation() {
     const user = await checkAuth();
     const navAuth = document.querySelector('.nav-auth');
     
+    // Check if nav-auth element exists before trying to modify it
+    if (!navAuth) {
+        console.log('No .nav-auth element found, skipping navigation update');
+        return;
+    }
+    
     if (user) {
         // Clear existing content
         navAuth.innerHTML = '';
@@ -68,14 +74,16 @@ async function updateNavigation() {
         
         // Add quest link to main menu if it doesn't exist
         const navMenu = document.querySelector('.nav-menu');
-        const existingQuestLink = Array.from(navMenu.children).find(li => 
-            li.querySelector('a[href="/quests.html"]')
-        );
-        
-        if (!existingQuestLink) {
-            const questLi = document.createElement('li');
-            questLi.innerHTML = '<a href="/quests.html" class="nav-link">Quests</a>';
-            navMenu.insertBefore(questLi, navAuth);
+        if (navMenu) {
+            const existingQuestLink = Array.from(navMenu.children).find(li => 
+                li.querySelector('a[href="/quests.html"]')
+            );
+            
+            if (!existingQuestLink) {
+                const questLi = document.createElement('li');
+                questLi.innerHTML = '<a href="/quests.html" class="nav-link">Quests</a>';
+                navMenu.insertBefore(questLi, navAuth);
+            }
         }
         
         // Update hero actions for logged-in users
@@ -126,132 +134,87 @@ function showNotification(message, type = 'info') {
     const existingNotifications = document.querySelectorAll('.notification');
     existingNotifications.forEach(notification => notification.remove());
 
+    // Create notification element
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `notification notification-${type}`;
+    
+    // Set notification styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        z-index: 10000;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        font-weight: 500;
+    `;
+
+    // Set background color based on type
+    const colors = {
+        success: '#4CAF50',
+        error: '#f44336',
+        warning: '#ff9800',
+        info: '#2196F3'
+    };
+    notification.style.background = colors[type] || colors.info;
+
     notification.textContent = message;
-    
-    // Add notification styles if not already present
-    if (!document.getElementById('notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notification-styles';
-        style.textContent = `
-            .notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 1rem 2rem;
-                background: var(--card-bg);
-                border: 2px solid var(--primary-color);
-                border-radius: 8px;
-                color: var(--text-primary);
-                z-index: 9999;
-                animation: slideIn 0.3s ease-out;
-            }
-            
-            .notification.success {
-                border-color: var(--success);
-                background: rgba(76, 175, 80, 0.1);
-            }
-            
-            .notification.error {
-                border-color: var(--danger);
-                background: rgba(244, 67, 54, 0.1);
-            }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
     document.body.appendChild(notification);
-    
-    // Auto remove after 3 seconds
+
+    // Animate in
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+
+    // Remove after 5 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
             }
         }, 300);
-    }, 3000);
+    }, 5000);
 }
 
-// Fetch and display stats on homepage
-async function loadHomeStats() {
-    if (!document.getElementById('totalPlayers')) return;
+// Load homepage stats
+function loadHomeStats() {
+    const statsElements = {
+        totalUsers: document.getElementById('totalUsers'),
+        activeReports: document.getElementById('activeReports'),
+        resolvedVulns: document.getElementById('resolvedVulns'),
+        totalRewards: document.getElementById('totalRewards')
+    };
 
-    try {
-        // Fetch total players
-        const playersResponse = await fetch(`${API_URL}/rankings?limit=1`);
-        if (playersResponse.ok) {
-            const playersData = await playersResponse.json();
-            document.getElementById('totalPlayers').textContent = playersData.pagination?.total || 0;
+    // Animate counter if elements exist
+    Object.entries(statsElements).forEach(([key, element]) => {
+        if (element) {
+            const targetValue = parseInt(element.textContent) || 0;
+            animateCounter(element, targetValue);
         }
-
-        // Fetch total bugs
-        const bugsResponse = await fetch(`${API_URL}/vulnerabilities?limit=1`);
-        if (bugsResponse.ok) {
-            const bugsData = await bugsResponse.json();
-            document.getElementById('totalBugs').textContent = bugsData.pagination?.total || 0;
-        }
-
-        // Fetch total quests
-        const questsResponse = await fetch(`${API_URL}/quests`);
-        if (questsResponse.ok) {
-            const questsData = await questsResponse.json();
-            document.getElementById('totalQuests').textContent = questsData.quests?.length || 0;
-        }
-
-        // Animate numbers
-        setTimeout(() => animateNumbers(), 500);
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        // Set default values if API fails
-        document.getElementById('totalPlayers').textContent = '0';
-        document.getElementById('totalBugs').textContent = '0';
-        document.getElementById('totalQuests').textContent = '0';
-    }
-}
-
-// Animate number counting
-function animateNumbers() {
-    const numbers = document.querySelectorAll('.stat-number');
-    numbers.forEach(num => {
-        const target = parseInt(num.textContent);
-        if (target === 0) return;
-        
-        let current = 0;
-        const increment = target / 50;
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                num.textContent = target;
-                clearInterval(timer);
-            } else {
-                num.textContent = Math.floor(current);
-            }
-        }, 30);
     });
+}
+
+// Animate counter function
+function animateCounter(element, target) {
+    let current = 0;
+    const increment = target / 50;
+    const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current);
+    }, 30);
 }
 
 // Format date
@@ -367,6 +330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('Main.js initialization complete');
 });
+
 function escapeHtml(unsafe) {
     return unsafe
         .replace(/&/g, "&amp;")

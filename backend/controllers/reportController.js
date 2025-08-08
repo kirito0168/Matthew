@@ -1,7 +1,15 @@
 const ReportModel = require('../models/reportModel');
 const VulnerabilityModel = require('../models/vulnerabilityModel');
 const UserModel = require('../models/userModel');
-const ActivityLogModel = require('../models/activityLogModel');
+
+// Optional import for ActivityLogModel - if it fails, we'll handle it gracefully
+let ActivityLogModel;
+try {
+    ActivityLogModel = require('../models/activityLogModel');
+} catch (error) {
+    console.warn('ActivityLogModel not available, activity logging will be disabled');
+    ActivityLogModel = null;
+}
 
 // Validation helper
 const validatePagination = (page, limit) => {
@@ -25,21 +33,38 @@ const validatePagination = (page, limit) => {
 
 // Helper function to add experience to user
 const addExperience = (userId, points, description) => {
-    UserModel.addExperience(userId, points, (error) => {
-        if (error) {
-            console.error('Error adding experience:', error);
-        } else {
-            console.log(`Added ${points} EXP to user ${userId}: ${description}`);
-        }
-    });
+    if (UserModel.addExperience) {
+        UserModel.addExperience(userId, points, (error) => {
+            if (error) {
+                console.error('Error adding experience:', error);
+            } else {
+                console.log(`Added ${points} EXP to user ${userId}: ${description}`);
+            }
+        });
+    }
+};
+
+// Helper function to log activity (optional)
+const logActivity = (logData, callback) => {
+    if (ActivityLogModel) {
+        ActivityLogModel.create(logData, callback);
+    } else {
+        // If ActivityLogModel is not available, just log to console and call callback
+        console.log('Activity:', logData);
+        if (callback) callback();
+    }
 };
 
 // Create new report - POST /reports
 const createReport = (req, res) => {
-    const { vulnerability_id, findings } = req.body;
+    const { vulnerability_id, description, proof_of_concept, impact, mitigation } = req.body;
     const user_id = req.userId;
 
-    console.log('Creating report:', { user_id, vulnerability_id, findingsLength: findings ? findings.length : 0 });
+    console.log('Creating report:', { 
+        user_id, 
+        vulnerability_id, 
+        descriptionLength: description ? description.length : 0 
+    });
 
     // Validate required fields
     if (!vulnerability_id) {
@@ -49,17 +74,17 @@ const createReport = (req, res) => {
         });
     }
 
-    if (!findings || findings.trim().length === 0) {
+    if (!description || description.trim().length === 0) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Report findings are required' 
+            message: 'Report description is required' 
         });
     }
 
-    if (findings.trim().length < 10) {
+    if (description.trim().length < 10) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Report findings must be at least 10 characters long' 
+            message: 'Report description must be at least 10 characters long' 
         });
     }
 
@@ -81,12 +106,11 @@ const createReport = (req, res) => {
         }
 
         const vulnerability = vulnerabilities[0];
-        console.log('Found vulnerability:', { id: vulnerability.id, title: vulnerability.title, severity: vulnerability.severity });
 
-        // Check if user already reported this vulnerability
+        // Check if user has already reported this vulnerability
         ReportModel.checkExistingReport(user_id, vulnerability_id, (checkError, existingReports) => {
             if (checkError) {
-                console.error('Existing report check error:', checkError);
+                console.error('Check existing report error:', checkError);
                 return res.status(500).json({ 
                     success: false, 
                     message: 'Server error while checking existing reports' 
@@ -96,91 +120,70 @@ const createReport = (req, res) => {
             if (existingReports && existingReports.length > 0) {
                 return res.status(409).json({ 
                     success: false, 
-                    message: 'You have already reported this vulnerability' 
+                    message: 'You have already submitted a report for this vulnerability' 
                 });
             }
-
-            // Calculate points based on vulnerability severity
-            const severityPoints = {
-                'CRITICAL': 500,
-                'HIGH': 300,
-                'MEDIUM': 200,
-                'LOW': 100,
-                'INFO': 50
-            };
-            
-            const points = severityPoints[vulnerability.severity] || vulnerability.exp_reward || 100;
-            console.log('Calculated points:', points, 'for severity:', vulnerability.severity);
 
             // Create the report
             const reportData = {
                 userId: user_id,
                 vulnerabilityId: vulnerability_id,
-                findings: findings.trim(),
-                status: 0, // 0 = Open, 1 = In Progress, 2 = Resolved
-                points: points
+                findings: JSON.stringify({
+                    description: description.trim(),
+                    proof_of_concept: proof_of_concept ? proof_of_concept.trim() : '',
+                    impact: impact ? impact.trim() : '',
+                    mitigation: mitigation ? mitigation.trim() : ''
+                }),
+                status: 0, // Open
+                points: vulnerability.exp_reward || 0
             };
 
             ReportModel.create(reportData, (createError, result) => {
                 if (createError) {
-                    console.error('Report creation error:', createError);
+                    console.error('Create report error:', createError);
                     return res.status(500).json({ 
                         success: false, 
-                        message: 'Failed to create report. Please try again.' 
+                        message: 'Server error while creating report' 
                     });
                 }
 
-                console.log('Report created with ID:', result.insertId);
+                console.log('Report created successfully:', result.insertId);
 
-                // Award EXP to user
-                addExperience(user_id, points, `Reported vulnerability: ${vulnerability.title}`);
-
-                // Log activity using ActivityLogModel
-                ActivityLogModel.create({
+                // Log the activity (optional)
+                logActivity({
                     userId: user_id,
-                    actionType: 'vulnerability_report',
+                    actionType: 'report_created',
                     details: {
                         reportId: result.insertId,
                         vulnerabilityId: vulnerability_id,
                         vulnerabilityTitle: vulnerability.title,
-                        severity: vulnerability.severity,
-                        points: points,
-                        findingsLength: findings.trim().length
+                        points: vulnerability.exp_reward || 0
                     }
                 }, (logError) => {
                     if (logError) {
                         console.error('Activity log error:', logError);
-                        // Don't fail the request if logging fails
                     }
                 });
 
                 res.status(201).json({
                     success: true,
-                    message: 'Report created successfully! Thank you for your contribution.',
-                    report: {
-                        id: result.insertId,
-                        user_id: user_id,
-                        vulnerability_id: vulnerability_id,
-                        findings: findings.trim(),
-                        status: 0,
-                        points: points,
-                        vulnerability_title: vulnerability.title,
-                        vulnerability_severity: vulnerability.severity,
-                        created_at: new Date().toISOString()
-                    }
+                    message: 'Report submitted successfully',
+                    reportId: result.insertId,
+                    points: vulnerability.exp_reward || 0
                 });
             });
         });
     });
 };
 
-// Get all reports - GET /reports
+// Get reports with filtering and pagination - GET /reports
 const getReports = (req, res) => {
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status, userId } = req.query;
+
+    console.log('Getting reports with filters:', { page, limit, status, userId });
+
+    // Validate pagination
     const validation = validatePagination(page, limit);
-    
-    console.log('Getting reports:', { page, limit, status });
-    
     if (!validation.isValid) {
         return res.status(400).json({ 
             success: false, 
@@ -190,13 +193,13 @@ const getReports = (req, res) => {
 
     const offset = (validation.page - 1) * validation.limit;
 
-    // If status filter is provided, use getByStatus method
+    // Check if filtering by status
     if (status !== undefined && status !== null && status !== '') {
         const statusValue = parseInt(status);
         if (isNaN(statusValue) || statusValue < -1 || statusValue > 2) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Invalid status value. Must be -1, 0, 1, or 2' 
+                message: 'Status must be -1, 0, 1, or 2' 
             });
         }
 
@@ -233,9 +236,32 @@ const getReports = (req, res) => {
             }
 
             console.log(`Found ${reports ? reports.length : 0} total reports`);
+            
+            // Parse findings JSON for each report
+            const processedReports = (reports || []).map(report => {
+                let parsedFindings = {};
+                try {
+                    if (report.findings) {
+                        parsedFindings = JSON.parse(report.findings);
+                    }
+                } catch (e) {
+                    // If JSON parsing fails, treat as plain text
+                    parsedFindings = { description: report.findings || '' };
+                }
+                
+                return {
+                    ...report,
+                    description: parsedFindings.description || '',
+                    proof_of_concept: parsedFindings.proof_of_concept || '',
+                    impact: parsedFindings.impact || '',
+                    mitigation: parsedFindings.mitigation || '',
+                    severity: report.vulnerability_severity || 'UNKNOWN'
+                };
+            });
+
             res.json({
                 success: true,
-                reports: reports || [],
+                reports: processedReports,
                 pagination: {
                     page: validation.page,
                     limit: validation.limit
@@ -274,10 +300,32 @@ const getReport = (req, res) => {
             });
         }
 
-        console.log('Found report:', reports[0].id);
+        const report = reports[0];
+        
+        // Parse findings JSON
+        let parsedFindings = {};
+        try {
+            if (report.findings) {
+                parsedFindings = JSON.parse(report.findings);
+            }
+        } catch (e) {
+            // If JSON parsing fails, treat as plain text
+            parsedFindings = { description: report.findings || '' };
+        }
+
+        const processedReport = {
+            ...report,
+            description: parsedFindings.description || '',
+            proof_of_concept: parsedFindings.proof_of_concept || '',
+            impact: parsedFindings.impact || '',
+            mitigation: parsedFindings.mitigation || '',
+            severity: report.vulnerability_severity || 'UNKNOWN'
+        };
+
+        console.log('Found report:', report.id);
         res.json({
             success: true,
-            report: reports[0]
+            report: processedReport
         });
     });
 };
@@ -313,9 +361,32 @@ const getUserReports = (req, res) => {
         }
 
         console.log(`Found ${reports ? reports.length : 0} reports for user ${userId}`);
+        
+        // Parse findings JSON for each report
+        const processedReports = (reports || []).map(report => {
+            let parsedFindings = {};
+            try {
+                if (report.findings) {
+                    parsedFindings = JSON.parse(report.findings);
+                }
+            } catch (e) {
+                // If JSON parsing fails, treat as plain text
+                parsedFindings = { description: report.findings || '' };
+            }
+            
+            return {
+                ...report,
+                description: parsedFindings.description || '',
+                proof_of_concept: parsedFindings.proof_of_concept || '',
+                impact: parsedFindings.impact || '',
+                mitigation: parsedFindings.mitigation || '',
+                severity: report.vulnerability_severity || 'UNKNOWN'
+            };
+        });
+
         res.json({
             success: true,
-            reports: reports || []
+            reports: processedReports
         });
     });
 };
@@ -386,7 +457,6 @@ const updateReport = (req, res) => {
         console.log('Current report status:', currentReport.status);
 
         // Check permissions (basic implementation)
-        // In a more complete system, you'd check if user owns the report or has admin rights
         const userId = req.userId;
         const isOwner = currentReport.user_id === userId;
         const isVulnOwner = currentReport.vulnerability_reporter_id === userId;
@@ -415,8 +485,8 @@ const updateReport = (req, res) => {
 
             console.log('Report updated successfully:', id);
 
-            // Log the update activity
-            ActivityLogModel.create({
+            // Log the update activity (optional)
+            logActivity({
                 userId: userId,
                 actionType: 'report_updated',
                 details: {
@@ -504,8 +574,8 @@ const deleteReport = (req, res) => {
 
             console.log('Report marked as deleted:', id);
 
-            // Log the deletion activity
-            ActivityLogModel.create({
+            // Log the deletion activity (optional)
+            logActivity({
                 userId: userId,
                 actionType: 'report_deleted',
                 details: {

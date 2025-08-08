@@ -134,6 +134,8 @@ bcrypt.hash('1234', saltRounds, (error, hash) => {
         user_id INT NOT NULL,
         vulnerability_id INT NOT NULL,
         status INT DEFAULT 0,
+        points INT DEFAULT 0,
+        findings TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -160,47 +162,27 @@ bcrypt.hash('1234', saltRounds, (error, hash) => {
         ('Nicholas the Renegade', 35, 'medium', 600, 'A special event boss that appears during Christmas.', 4000),
         ('The Skull Reaper', 75, 'nightmare', 2500, 'The terrifying boss of the 75th floor.', 15000);
 
-      INSERT INTO achievements (title, description, icon_url, exp_reward, requirement_type, requirement_value) VALUES
-        ('First Blood', 'Report your first vulnerability', '/images/achievements/first-blood.png', 100, 'vulnerabilities', 1),
-        ('Bug Hunter', 'Report 10 vulnerabilities', '/images/achievements/bug-hunter.png', 500, 'vulnerabilities', 10),
-        ('Boss Slayer', 'Complete your first quest', '/images/achievements/boss-slayer.png', 200, 'quests', 1),
-        ('Floor Master', 'Complete 5 quests', '/images/achievements/floor-master.png', 1000, 'quests', 5),
-        ('Rising Star', 'Reach level 5', '/images/achievements/rising-star.png', 300, 'level', 5),
-        ('Veteran Player', 'Reach level 10', '/images/achievements/veteran.png', 1500, 'level', 10);
+      INSERT INTO achievements (title, description, requirement_type, requirement_value, exp_reward) VALUES
+        ('First Steps', 'Complete your first quest', 'quests', 1, 100),
+        ('Bug Hunter', 'Report your first vulnerability', 'vulnerabilities', 1, 150),
+        ('Level 5 Warrior', 'Reach level 5', 'level', 5, 200),
+        ('Veteran Player', 'Reach level 10', 'level', 10, 500),
+        ('Master Hunter', 'Complete 10 quests', 'quests', 10, 1000);
 
       INSERT INTO reviews (user_id, vulnerability_id, rating, comment) VALUES
-        (1, 1, 5, 'Great bug bounty platform! The gamification makes it really engaging.'),
-        (2, 2, 4, 'Good system overall, but could use more quest variety.'),
-        (3, 3, 5, 'Love the SAO theme! Makes vulnerability hunting feel like an adventure.'),
-        (1, 4, 4, 'The ranking system is motivating. Would love to see more achievements.'),
-        (2, 5, 5, 'Excellent platform for learning about security vulnerabilities.');
-
-      INSERT INTO user_quests (user_id, quest_id, damage_dealt) VALUES
-        (1, 1, 3000),
-        (1, 2, 5000),
-        (2, 1, 3000),
-        (3, 1, 3000);
-
-      INSERT INTO user_achievements (user_id, achievement_id) VALUES
-        (1, 1),
-        (1, 3),
-        (2, 1),
-        (2, 3),
-        (3, 1);
+        (1, 1, 5, 'Critical vulnerability! Great find!'),
+        (2, 2, 4, 'Good catch on the XSS issue'),
+        (3, 3, 3, 'Password policy needs improvement');
 
       INSERT INTO activity_logs (user_id, action_type, details) VALUES
-        (1, 'vulnerability_reported', 'Reported SQL Injection vulnerability'),
-        (2, 'quest_completed', 'Defeated Illfang the Kobold Lord'),
-        (3, 'achievement_unlocked', 'Unlocked First Blood achievement'),
-        (1, 'level_up', 'Reached level 10'),
-        (2, 'vulnerability_reported', 'Reported XSS vulnerability');
+        (1, 'quest_completed', '{"questId": 1, "damage": 1500}'),
+        (2, 'vulnerability_reported', '{"vulnerabilityId": 2, "severity": "high"}'),
+        (3, 'level_up', '{"oldLevel": 4, "newLevel": 5}');
 
-      INSERT INTO reports (user_id, vulnerability_id, status) VALUES
-        (1, 1, 0),
-        (2, 2, 1),
-        (3, 3, 2),
-        (1, 4, 0),
-        (2, 5, 0);
+      INSERT INTO reports (user_id, vulnerability_id, status, points, findings) VALUES
+        (1, 1, 0, 500, '{"description": "Found SQL injection in login form", "proof_of_concept": "Username: admin\\' OR 1=1--", "impact": "Complete database access", "mitigation": "Use parameterized queries"}'),
+        (2, 2, 1, 300, '{"description": "XSS vulnerability in comments", "proof_of_concept": "<script>alert(\\'XSS\\')</script>", "impact": "User session hijacking", "mitigation": "Sanitize user input"}'),
+        (3, 3, 2, 200, '{"description": "Weak password policy", "proof_of_concept": "Password \\'123\\'was accepted", "impact": "Easy brute force attacks", "mitigation": "Enforce stronger password requirements"}');
     `;
 
     pool.query(SQLSTATEMENT, callback);
