@@ -7,6 +7,7 @@ let currentPage = 1;
 const itemsPerPage = 10;
 let allVulnerabilities = [];
 let selectedVulnerability = null;
+let currentUser = null;
 
 // Ensure API_URL is defined
 if (typeof API_URL === 'undefined') {
@@ -26,15 +27,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Check authentication
         const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userData = localStorage.getItem('user');
         
-        if (!token || !user.id) {
+        if (!token || !userData) {
             console.log('❌ No authentication found, redirecting to login...');
             window.location.href = '/login.html';
             return;
         }
 
-        console.log('✅ User authenticated:', user.username);
+        try {
+            currentUser = JSON.parse(userData);
+        } catch (e) {
+            console.error('❌ Invalid user data, redirecting to login...');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+            return;
+        }
+
+        if (!currentUser || !currentUser.id) {
+            console.log('❌ Invalid user data, redirecting to login...');
+            window.location.href = '/login.html';
+            return;
+        }
+
+        console.log('✅ User authenticated:', currentUser.username);
 
         // Load initial data in sequence
         console.log('📊 Loading initial data...');
@@ -49,37 +66,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         
     } catch (error) {
         console.error('❌ Error initializing reports page:', error);
-        showNotification('Error initializing page. Please refresh and try again.', 'error');
+        if (typeof showNotification === 'function') {
+            showNotification('Error initializing page. Please refresh and try again.', 'error');
+        } else {
+            alert('Error initializing page. Please refresh and try again.');
+        }
     }
 });
 
-// Setup all event handlers
+// Setup event handlers
 function setupEventHandlers() {
-    console.log('🔧 Setting up event handlers...');
+    console.log('⚙️ Setting up event handlers...');
     
-    // Form submission handler
+    // Report form submission
     const reportForm = document.getElementById('reportForm');
     if (reportForm) {
         reportForm.addEventListener('submit', handleReportSubmit);
-        console.log('✅ Report form handler attached');
     }
 
-    // Modal close on outside click
-    window.onclick = function(event) {
-        const modal = document.getElementById('reportModal');
-        if (event.target === modal) {
-            closeReportModal();
-        }
-    };
-
-    // Vulnerability select change handler
-    const vulnSelect = document.getElementById('vulnerabilitySelect');
-    if (vulnSelect) {
-        vulnSelect.addEventListener('change', updateVulnerabilityInfo);
-        console.log('✅ Vulnerability select handler attached');
-    }
-
-    // Tab click handlers
+    // Tab switching
     const tabButtons = document.querySelectorAll('.tab-btn');
     tabButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -89,170 +94,108 @@ function setupEventHandlers() {
             }
         });
     });
-    console.log('✅ Tab handlers attached');
 
-    // ESC key to close modal
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeReportModal();
-        }
-    });
+    // Modal handlers
+    const reportModal = document.getElementById('reportModal');
+    const closeModalBtn = document.querySelector('.modal-close');
+    
+    if (closeModalBtn && reportModal) {
+        closeModalBtn.addEventListener('click', closeReportModal);
+    }
+
+    // Submit report button
+    const submitReportBtn = document.getElementById('submitReportBtn');
+    if (submitReportBtn) {
+        submitReportBtn.addEventListener('click', openReportModal);
+    }
+
+    console.log('✅ Event handlers setup complete');
 }
 
 // Load vulnerabilities for dropdown
 async function loadVulnerabilities() {
-    console.log('📦 Loading vulnerabilities...');
+    console.log('🔧 Loading vulnerabilities...');
     
     try {
         const token = localStorage.getItem('token');
-        
-        if (!token) {
-            throw new Error('No authentication token found');
-        }
-
-        const response = await fetch(`${API_URL}/vulnerabilities?limit=100`, {
+        const response = await fetch(`${API_URL}/vulnerabilities?status=open&limit=100`, {
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${token}`
             }
         });
 
         if (response.ok) {
             const data = await response.json();
             allVulnerabilities = data.vulnerabilities || [];
-            console.log(`✅ Loaded ${allVulnerabilities.length} vulnerabilities`);
-            populateVulnerabilitySelect();
+            populateVulnerabilityDropdown();
+            console.log('✅ Loaded vulnerabilities:', allVulnerabilities.length);
         } else {
-            const errorData = await response.text();
-            console.error('❌ Failed to load vulnerabilities:', response.status, errorData);
-            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            console.error('❌ Failed to load vulnerabilities:', response.status);
         }
     } catch (error) {
         console.error('❌ Error loading vulnerabilities:', error);
-        showNotification('Failed to load vulnerabilities. Some features may not work.', 'error');
     }
 }
 
 // Populate vulnerability dropdown
-function populateVulnerabilitySelect() {
-    const select = document.getElementById('vulnerabilitySelect');
-    if (!select) {
-        console.error('❌ Vulnerability select element not found');
+function populateVulnerabilityDropdown() {
+    const dropdown = document.getElementById('vulnerabilitySelect');
+    if (!dropdown) {
+        console.warn('⚠️ Vulnerability dropdown not found');
         return;
     }
 
-    select.innerHTML = '<option value="">Select a vulnerability...</option>';
-    
-    if (allVulnerabilities.length === 0) {
-        select.innerHTML += '<option value="" disabled>No vulnerabilities available</option>';
-        return;
-    }
+    // Clear existing options except the first one
+    dropdown.innerHTML = '<option value="">Choose a vulnerability...</option>';
     
     allVulnerabilities.forEach(vuln => {
         const option = document.createElement('option');
         option.value = vuln.id;
-        option.textContent = `${vuln.title} (${vuln.severity || 'UNKNOWN'})`;
-        option.dataset.vulnerability = JSON.stringify(vuln);
-        select.appendChild(option);
+        option.textContent = `${vuln.title} (${vuln.severity}) - ${vuln.exp_reward} EXP`;
+        dropdown.appendChild(option);
     });
     
-    console.log(`✅ Populated vulnerability select with ${allVulnerabilities.length} options`);
+    console.log('✅ Vulnerability dropdown populated');
 }
 
-// Update vulnerability info display
-function updateVulnerabilityInfo() {
-    const select = document.getElementById('vulnerabilitySelect');
-    const infoDiv = document.getElementById('vulnerabilityInfo');
-    
-    if (!select || !infoDiv) {
-        console.error('❌ Required elements not found for vulnerability info update');
-        return;
-    }
-
-    if (select.value) {
-        const option = select.options[select.selectedIndex];
-        if (option && option.dataset.vulnerability) {
-            try {
-                selectedVulnerability = JSON.parse(option.dataset.vulnerability);
-                const severity = selectedVulnerability.severity || 'UNKNOWN';
-                const expReward = selectedVulnerability.exp_reward || 0;
-                
-                infoDiv.innerHTML = `
-                    <div class="vulnerability-details">
-                        <h4>${escapeHtml(selectedVulnerability.title)}</h4>
-                        <p><strong>Severity:</strong> <span class="severity ${severity.toLowerCase()}">${severity}</span></p>
-                        <p><strong>EXP Reward:</strong> ${expReward} points</p>
-                        <p><strong>Description:</strong> ${escapeHtml(selectedVulnerability.description || 'No description available')}</p>
-                        ${selectedVulnerability.reporter_name ? 
-                            `<p style="color: var(--text-secondary); margin-top: 0.5rem;">
-                                <strong>Reported by:</strong> ${escapeHtml(selectedVulnerability.reporter_name)}
-                            </p>` : ''}
-                    </div>
-                `;
-                infoDiv.classList.add('show');
-                console.log('✅ Vulnerability info updated:', selectedVulnerability.title);
-            } catch (error) {
-                console.error('❌ Error parsing vulnerability data:', error);
-                infoDiv.classList.remove('show');
-            }
-        }
-    } else {
-        infoDiv.classList.remove('show');
-        selectedVulnerability = null;
-        console.log('ℹ️ Vulnerability info cleared');
-    }
-}
-
-// Load reports with current filters
+// Load reports based on current filters
 async function loadReports() {
-    console.log(`📊 Loading reports (tab: ${currentTab}, page: ${currentPage})...`);
-    const reportsList = document.getElementById('reportsList');
+    console.log(`📊 Loading reports for tab: ${currentTab}, page: ${currentPage}`);
     
+    const reportsList = document.getElementById('reportsList');
     if (!reportsList) {
         console.error('❌ Reports list element not found');
         return;
     }
-    
-    reportsList.innerHTML = '<div class="loading-spinner">🔄 Loading reports...</div>';
+
+    // Show loading state
+    reportsList.innerHTML = createLoadingHTML();
 
     try {
         const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        if (!token) {
-            throw new Error('No authentication token found');
-        }
-        
         let url = `${API_URL}/reports?page=${currentPage}&limit=${itemsPerPage}`;
         
         // Add filters based on current tab
-        if (currentTab === 'my-reports' && user.id) {
-            url = `${API_URL}/reports/user/${user.id}?page=${currentPage}&limit=${itemsPerPage}`;
-            console.log(`📋 Loading user reports for user ID: ${user.id}`);
-        } else if (currentTab !== 'all') {
-            const statusMap = {
-                'open': 0,
-                'in-progress': 1,
-                'resolved': 2
-            };
-            if (statusMap[currentTab] !== undefined) {
-                url += `&status=${statusMap[currentTab]}`;
-                console.log(`📋 Loading reports with status: ${statusMap[currentTab]} (${currentTab})`);
-            }
+        if (currentTab === 'my') {
+            url += `&userId=${currentUser.id}`;
+        } else if (currentTab === 'pending') {
+            url += '&status=0';
+        } else if (currentTab === 'resolved') {
+            url += '&status=2';
         }
 
-        console.log(`🌐 Fetching reports from: ${url}`);
+        console.log('🌐 Fetching reports from:', url);
 
         const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${token}`
             }
         });
 
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Reports loaded successfully:', {
+            console.log('📨 Reports response:', {
+                success: data.success,
                 count: data.reports ? data.reports.length : 0,
                 pagination: data.pagination
             });
@@ -279,6 +222,18 @@ async function loadReports() {
     }
 }
 
+// Create loading HTML
+function createLoadingHTML() {
+    return `
+        <div class="loading-container">
+            <div class="loading-spinner">
+                <div class="spinner-circle"></div>
+                <div class="spinner-text">Loading reports...</div>
+            </div>
+        </div>
+    `;
+}
+
 // Display reports in the UI
 function displayReports(reports) {
     const reportsList = document.getElementById('reportsList');
@@ -286,8 +241,6 @@ function displayReports(reports) {
         console.error('❌ Reports list element not found');
         return;
     }
-    
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (!reports || reports.length === 0) {
         reportsList.innerHTML = `
@@ -411,125 +364,197 @@ function switchTab(tabId) {
     loadReports();
 }
 
-// Handle report form submission
-async function handleReportSubmit(event) {
-    event.preventDefault();
-    console.log('📝 Handling report submission...');
-    
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    try {
-        // Disable submit button and show loading state
-        submitBtn.disabled = true;
-        submitBtn.textContent = '⏳ Submitting...';
-
-        const formData = new FormData(form);
-        const reportData = {
-            vulnerability_id: parseInt(formData.get('vulnerability_id')),
-            findings: formData.get('findings').trim()
-        };
-
-        console.log('📋 Report data:', {
-            vulnerability_id: reportData.vulnerability_id,
-            findingsLength: reportData.findings.length
-        });
-
-        // Validate form data
-        if (!reportData.vulnerability_id) {
-            throw new Error('Please select a vulnerability from the dropdown');
-        }
-
-        if (!reportData.findings || reportData.findings.length < 10) {
-            throw new Error('Please provide detailed findings (at least 10 characters)');
-        }
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('Authentication token not found. Please log in again.');
-        }
-
-        console.log('🌐 Submitting report to API...');
-        const response = await fetch(`${API_URL}/reports`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(reportData)
-        });
-
-        const data = await response.json();
-        console.log('📨 API response:', { status: response.status, success: data.success });
-
-        if (response.ok && data.success) {
-            console.log('✅ Report submitted successfully');
-            showNotification('🎉 Report submitted successfully! Thank you for your contribution.', 'success');
-            closeReportModal();
-            form.reset();
-            
-            // Clear vulnerability info
-            const infoDiv = document.getElementById('vulnerabilityInfo');
-            if (infoDiv) {
-                infoDiv.classList.remove('show');
-            }
-            selectedVulnerability = null;
-            
-            // Reload reports to show the new one
-            await loadReports();
-        } else {
-            throw new Error(data.message || 'Failed to submit report');
-        }
-
-    } catch (error) {
-        console.error('❌ Error submitting report:', error);
-        showNotification(`❌ ${error.message}`, 'error');
-    } finally {
-        // Re-enable submit button
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    }
-}
-
-// Modal functions
+// Open report modal
 function openReportModal() {
-    console.log('📋 Opening report modal...');
+    console.log('📝 Opening report modal...');
     const modal = document.getElementById('reportModal');
     if (modal) {
         modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
         
-        // Focus on vulnerability select
-        const vulnSelect = document.getElementById('vulnerabilitySelect');
-        if (vulnSelect) {
-            setTimeout(() => vulnSelect.focus(), 100);
+        // Reset form
+        const form = document.getElementById('reportForm');
+        if (form) {
+            form.reset();
         }
     }
 }
 
+// Close report modal
 function closeReportModal() {
     console.log('❌ Closing report modal...');
     const modal = document.getElementById('reportModal');
     if (modal) {
         modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
     }
 }
 
-// View functions
-function viewVulnerability(vulnId) {
-    console.log(`👁️ Viewing vulnerability: ${vulnId}`);
-    window.location.href = `/vulnerabilities.html#${vulnId}`;
+// Handle report form submission
+async function handleReportSubmit(event) {
+    event.preventDefault();
+    console.log('📝 Handling report submission...');
+    
+    const vulnerabilityId = document.getElementById('vulnerabilitySelect').value;
+    const findings = document.getElementById('findings').value.trim();
+    
+    if (!vulnerabilityId) {
+        showNotification('Please select a vulnerability', 'error');
+        return;
+    }
+    
+    if (!findings) {
+        showNotification('Please provide your findings', 'error');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        console.log('🌐 Submitting report...');
+        
+        const response = await fetch(`${API_URL}/reports`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                vulnerability_id: parseInt(vulnerabilityId),
+                findings: findings
+            })
+        });
+
+        const data = await response.json();
+        console.log('📨 Submit response:', { status: response.status, success: data.success });
+
+        if (response.ok && data.success) {
+            console.log('✅ Report submitted successfully');
+            showNotification('Report submitted successfully! 🎉', 'success');
+            closeReportModal();
+            await loadReports(); // Reload to show new report
+        } else {
+            throw new Error(data.message || 'Failed to submit report');
+        }
+    } catch (error) {
+        console.error('❌ Error submitting report:', error);
+        showNotification(`❌ ${error.message}`, 'error');
+    }
 }
 
-function viewReportDetails(reportId) {
-    console.log(`👁️ Viewing report details: ${reportId}`);
-    // TODO: Implement detailed report view modal or page
-    showNotification(`📋 Viewing report #${reportId} (detailed view coming soon)`, 'info');
+// View report details
+async function viewReportDetails(reportId) {
+    console.log(`👁️ Viewing details for report: ${reportId}`);
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/reports/${reportId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        console.log('📨 Report details response:', { status: response.status, success: data.success });
+
+        if (response.ok && data.success) {
+            displayReportDetailsModal(data.report);
+        } else {
+            throw new Error(data.message || 'Failed to load report details');
+        }
+    } catch (error) {
+        console.error('❌ Error loading report details:', error);
+        showNotification(`❌ ${error.message}`, 'error');
+    }
 }
 
-// Report action functions
+// Display report details in modal
+function displayReportDetailsModal(report) {
+    const modal = document.getElementById('reportDetailsModal') || createReportDetailsModal();
+    
+    const statusText = getStatusText(report.status);
+    const statusClass = getStatusClass(report.status);
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report #${report.id} Details</h2>
+                <button class="modal-close" onclick="closeReportDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="report-detail-section">
+                    <h3>📋 Report Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Status:</span>
+                            <span class="report-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Submitted:</span>
+                            <span>${formatDate(report.created_at)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Reporter:</span>
+                            <span>${escapeHtml(report.username || 'Anonymous')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Points:</span>
+                            <span>+${report.vulnerability_points || report.points || 100} EXP</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-detail-section">
+                    <h3>🎯 Vulnerability</h3>
+                    <div class="vulnerability-info">
+                        <div class="vuln-title">${escapeHtml(report.vulnerability_title || 'Unknown Vulnerability')}</div>
+                        <div class="vuln-severity">Severity: ${report.vulnerability_severity || 'Unknown'}</div>
+                    </div>
+                </div>
+                
+                <div class="report-detail-section">
+                    <h3>🔍 Findings</h3>
+                    <div class="findings-content">
+                        ${escapeHtml(report.findings || 'No findings provided').replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                
+                ${report.status !== 2 && report.vulnerability_reporter_id === currentUser.id ? `
+                <div class="report-detail-actions">
+                    <button class="btn-action btn-success" onclick="resolveReport(${report.id}); closeReportDetailsModal();">
+                        ✅ Mark as Resolved
+                    </button>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    modal.style.display = 'block';
+}
+
+// Create report details modal if it doesn't exist
+function createReportDetailsModal() {
+    const modal = document.createElement('div');
+    modal.id = 'reportDetailsModal';
+    modal.className = 'modal';
+    document.body.appendChild(modal);
+    return modal;
+}
+
+// Close report details modal
+function closeReportDetailsModal() {
+    const modal = document.getElementById('reportDetailsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// View vulnerability details
+async function viewVulnerability(vulnerabilityId) {
+    console.log(`🎯 Viewing vulnerability: ${vulnerabilityId}`);
+    // Redirect to vulnerabilities page with the specific vulnerability
+    window.location.href = `/vulnerabilities.html#${vulnerabilityId}`;
+}
+
+// Delete report
 async function deleteReport(reportId) {
     console.log(`🗑️ Attempting to delete report: ${reportId}`);
     
@@ -566,6 +591,7 @@ async function deleteReport(reportId) {
     }
 }
 
+// Resolve report
 async function resolveReport(reportId) {
     console.log(`✅ Attempting to resolve report: ${reportId}`);
     
@@ -680,49 +706,44 @@ function escapeHtml(text) {
 }
 
 function showNotification(message, type = 'info') {
-    console.log(`🔔 Notification [${type.toUpperCase()}]: ${message}`);
-    
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    });
-    
-    // Create new notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    
-    // Add close button
-    const closeBtn = document.createElement('span');
-    closeBtn.innerHTML = ' ✕';
-    closeBtn.style.cursor = 'pointer';
-    closeBtn.style.marginLeft = '10px';
-    closeBtn.onclick = () => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    };
-    notification.appendChild(closeBtn);
-    
-    // Add to page
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 5000);
+    // Use global showNotification if available, otherwise create simple alert
+    if (window.showNotification && typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+    } else {
+        // Fallback notification system
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+            color: white;
+            border-radius: 8px;
+            z-index: 10000;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
 }
 
-// Global functions that need to be accessible from HTML onclick handlers
+// Export functions to global scope
+window.switchTab = switchTab;
 window.openReportModal = openReportModal;
 window.closeReportModal = closeReportModal;
-window.viewVulnerability = viewVulnerability;
 window.viewReportDetails = viewReportDetails;
+window.closeReportDetailsModal = closeReportDetailsModal;
+window.viewVulnerability = viewVulnerability;
 window.deleteReport = deleteReport;
 window.resolveReport = resolveReport;
 window.changePage = changePage;
+
+console.log('📦 Reports.js loaded successfully');
